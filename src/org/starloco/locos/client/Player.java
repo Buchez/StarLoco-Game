@@ -531,10 +531,22 @@ public class Player implements Scripted<SPlayer>, Actor {
         for (int a = 1; a <= player.getLevel(); a++)
             Constant.onLevelUpSpells(player, a);
 
-        if (!DatabaseManager.get(PlayerData.class).insert(player))
-            return null;
+		if (!DatabaseManager.get(PlayerData.class).insert(player))
+			return null;
 
-        SocketManager.GAME_SEND_WELCOME(player);
+		// Donne automatiquement la Carte - Jeune Boufton Blanc
+		// à tout nouveau personnage.
+		ObjectTemplate cardTemplate = World.world.getObjTemplate(15082);
+
+		if (cardTemplate != null) {
+			GameObject card = cardTemplate.createNewItem(1, false);
+
+			if (player.addItem(card, true, false)) {
+				World.world.addGameObject(card);
+			}
+		}
+
+		SocketManager.GAME_SEND_WELCOME(player);
         World.world.sendMessageToAll("client.player.onjoingame.welcome", player.getName());
 
         World.world.addPlayer(player);

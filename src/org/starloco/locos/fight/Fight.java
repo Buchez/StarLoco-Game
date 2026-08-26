@@ -55,6 +55,10 @@ import org.starloco.locos.other.Action;
 import org.starloco.locos.script.DataScriptVM;
 import org.starloco.locos.script.ScriptVM;
 import org.starloco.locos.util.TimerWaiter;
+import org.starloco.locos.database.data.game.MonsterCardData;
+import org.starloco.locos.database.data.game.PlayerMonsterCardData;
+import org.starloco.locos.client.other.Stats;
+import org.starloco.locos.database.data.login.ObjectData;
 
 import static org.starloco.locos.fight.MobFighter.ENUTROF_CHEST_ID;
 
@@ -106,6 +110,7 @@ public class Fight {
 
     private final List<Fighter> winners = new ArrayList<>();
     private final List<Fighter> losers = new ArrayList<>();
+	private final Map<Integer, Map<Integer, Integer>> monsterCardDrops = new HashMap<>();
 
     public Fight(int type, int id, GameMap rpMap, Player perso, Player init2) {
         this.launchTime = System.currentTimeMillis();
@@ -1162,8 +1167,42 @@ public class Fight {
         this.checkTimer = false;
         SocketManager.GAME_SEND_GIC_PACKETS_TO_FIGHT(this, 7);
         SocketManager.GAME_SEND_GS_PACKET_TO_FIGHT(this, 7);
-        initOrderPlaying();
-        setCurPlayer(-1);
+		initOrderPlaying();
+		// add pour auto summon boufton blanc
+	// Invocation des monstres correspondant aux cartes équipées.
+	for (Fighter fighter : new ArrayList<>(getFighters(3))) {
+
+		if (fighter.getPlayer() == null || fighter.isDead())
+			continue;
+
+		Player player = fighter.getPlayer();
+
+		PlayerMonsterCardData cardData =
+				DatabaseManager.get(PlayerMonsterCardData.class);
+
+		if (cardData == null)
+			continue;
+
+		Map<Integer, Integer> equipped =
+				cardData.getEquippedMonsterIds(player.getId());
+
+		for (Integer monsterId : equipped.values()) {
+
+			if (monsterId == null || monsterId <= 0)
+				continue;
+
+			// On utilise le grade 1 comme base.
+			// autoSummonMonster() copie ensuite le grade et adapte son niveau
+			// à celui de l'invocateur.
+			autoSummonMonster(
+					fighter,
+					monsterId,
+					1
+			);
+		}
+	}
+
+		setCurPlayer(-1);
         SocketManager.GAME_SEND_GTL_PACKET_TO_FIGHT(this, 7);
         SocketManager.GAME_SEND_GTM_PACKET_TO_FIGHT(this, 7);
 
@@ -3455,7 +3494,142 @@ public class Fight {
     public int getNextLowerFighterGuid() {
         return nextId--;
     }
+	private void autoSummonMonster(Fighter owner, int monsterId, int level) {
+		if (owner == null || owner.getCell() == null)
+			return;
 
+		Monster monster = World.world.getMonstre(monsterId);
+		if (monster == null)
+			return;
+
+		MonsterGrade grade = monster.getGradeByLevel(level);
+
+		if (grade == null)
+			grade = monster.getRandomGrade();
+
+		if (grade == null)
+			return;
+
+		grade = grade.getCopy();
+		// L'invocation prend le niveau de son invocateur.
+		// On modifie uniquement la copie du MonsterGrade afin de ne pas
+		// modifier les données globales du monstre 972.
+		grade.setLevel(owner.getLvl());
+		int cellId = getMap().getRandomNearFreeCellId(owner.getCell().getId());
+
+		if (cellId < 0)
+			return;
+
+		GameCase cell = getMap().getCase(cellId);
+
+		if (cell == null || !cell.isWalkableFight() || !cell.getFighters().isEmpty())
+			return;
+
+		Fighter summon = Fighter.NewSummon(
+				getNextLowerFighterGuid(),
+				this,
+				grade,
+				owner
+		);
+
+		summon.setTeam(owner.getTeam());
+		summon.setInvocator(owner);
+		if (summon instanceof SummonFighter) {
+			((SummonFighter) summon).setLootForInvoker(true);
+		}
+		
+		cell.addFighter(summon);
+		summon.setCell(cell);
+
+		addFighterInTeam(summon, owner.getTeam());
+
+		int ownerIndex = getOrderPlaying().indexOf(owner);
+
+		if (ownerIndex >= 0)
+			getOrderPlaying().add(ownerIndex + 1, summon);
+
+		String gm = summon.getGmPacket('+', true).substring(3);
+		String gtl = getGTL();
+
+		TimerWaiter.addNext(() -> {
+			SocketManager.GAME_SEND_GA_PACKET_TO_FIGHT(
+					this,
+					7,
+					181,
+					owner.getId() + "",
+					gm
+			);
+
+			SocketManager.GAME_SEND_GA_PACKET_TO_FIGHT(
+					this,
+					7,
+					999,
+					owner.getId() + "",
+					gtl
+			);
+		}, 0);
+	}
+	// Affiche dans le chat de chaque joueur de la team 0 la prospection
+// finale de tous les combattants de son équipe.
+// La valeur affichée correspond à getPros(), donc à la valeur
+// réellement utilisée par le calcul des drops.
+	private void sendFinalProspectionTeam0() {
+
+		StringBuilder message = new StringBuilder();
+
+		message.append("[DROP] Prospection finale : ");
+
+		boolean first = true;
+
+		for (Fighter fighter : this.team0.values()) {
+
+			// Seuls les joueurs et les invocations sont intéressants ici.
+			if (fighter.getPlayer() == null && !fighter.isInvocation())
+				continue;
+
+			if (!first)
+				message.append(" | ");
+
+			if (fighter.getPlayer() != null) {
+				// Joueur normal.
+				message.append(fighter.getPlayer().getName())
+					   .append(" : ")
+					   .append(fighter.getPros())
+					   .append(" PP");
+			} else {
+				// Invocation : on affiche son nom et son propriétaire.
+				message.append(fighter.getPacketsName());
+
+				if (fighter.getInvocator() != null
+						&& fighter.getInvocator().getPlayer() != null) {
+
+					message.append(" (invocation de ")
+						   .append(fighter.getInvocator().getPlayer().getName())
+						   .append(")");
+				}
+
+				message.append(" : ")
+					   .append(fighter.getPros())
+					   .append(" PP");
+			}
+
+			first = false;
+		}
+
+		if (first)
+			return;
+
+		// Le message est envoyé à chaque joueur de la team 0.
+		for (Fighter fighter : this.team0.values()) {
+
+			if (fighter.getPlayer() != null) {
+				SocketManager.GAME_SEND_MESSAGE(
+						fighter.getPlayer(),
+						message.toString()
+				);
+			}
+		}
+	}
     public void addFighterInTeam(Fighter f, int team) {
         if (team == 0)
             this.team0.put(f.getId(), f);
@@ -4331,7 +4505,93 @@ public class Fight {
 
         return Packet.toString();
     }
+	/**
+ 
+ * Teste le drop de la carte correspondant à un monstre vaincu.
+ *
+ * Pour le moment le taux de base est volontairement fixé à 100 %
+ * afin de tester le fonctionnement complet du système.
+ *
+ * La prospection utilisée est celle du Fighter, comme pour les drops
+ * classiques du serveur.
+ */
+	private void tryDropMonsterCard(Fighter winner, Fighter monster) {
+    if (winner == null || winner.getPlayer() == null || monster == null || monster.getMob() == null)
+        return;
 
+    Player player = winner.getPlayer();
+
+    // Identifiant du monstre vaincu.
+    int monsterId = monster.getMob().getTemplate().getId();
+
+    // Recherche de la carte associée.
+    MonsterCardData cardData = DatabaseManager.get(MonsterCardData.class);
+    int cardItemId = cardData.getCardItemId(monsterId);
+
+    // Aucun système de carte configuré pour ce monstre.
+    if (cardItemId <= 0)
+        return;
+
+    // Chance de drop.
+    double prospecting = winner.getPros() / 100.0D;
+    final double baseChance = 100.0D;
+
+    double finalChance = baseChance * prospecting;
+
+    if (finalChance > 100.0D)
+        finalChance = 100.0D;
+
+    double roll = Math.random() * 100.0D;
+
+    if (roll >= finalChance)
+        return;
+
+    // Vérifie que le template de carte existe.
+    ObjectTemplate cardTemplate = World.world.getObjTemplate(cardItemId);
+
+    if (cardTemplate == null)
+        return;
+
+    // Création de l'objet uniquement en mémoire.
+    // On évite createNewItem() car cette méthode insère immédiatement
+    // l'objet dans world_objects.
+    GameObject card = new GameObject(
+            -1,
+            cardTemplate.getId(),
+            1,
+            Constant.ITEM_POS_NO_EQUIPED,
+            new Stats(false, null),
+            new ArrayList<>(),
+            new HashMap<>(),
+            new HashMap<>(),
+            0
+    );
+
+    // Ajout dans l'inventaire.
+    // false = l'objet a été fusionné avec un objet identique déjà présent.
+    boolean added = player.addItem(card, true, false);
+
+    // Si l'objet est nouveau, il faut l'ajouter au World pour qu'il soit
+    // enregistré correctement.
+    if (added) {
+        World.world.addGameObject(card);
+    }
+
+    // Mémorise le drop pour la fenêtre de fin de combat.
+    monsterCardDrops
+            .computeIfAbsent(player.getId(), k -> new HashMap<>())
+            .merge(cardItemId, 1, Integer::sum);
+
+    // Rafraîchit l'inventaire du joueur.
+    SocketManager.GAME_SEND_Ow_PACKET(player);
+
+    // Message facultatif au joueur.
+    SocketManager.GAME_SEND_MESSAGE(
+            player,
+            "Vous avez obtenu : <b>" + cardTemplate.getName() + "</b>.",
+            "009900"
+    );
+}
     public String getGE(int win) {
         // Unused: long t1 = System.currentTimeMillis();
         final StringBuilder packet = new StringBuilder();
@@ -4361,8 +4621,16 @@ public class Fight {
             Entry<Integer, Fighter> entry = iterator.next();
             Fighter fighter = entry.getValue();
 
-            if (fighter.isInvocation() && fighter.getMob() != null && fighter.getMob().getTemplate().getId() != 285)
-                iterator.remove();
+			// Une invocation normale est exclue des récompenses.
+			// Exception : le coffre animé et les invocations marquées
+			// "lootForInvoker", qui doivent participer au butin.
+			if (fighter.isInvocation()
+					&& fighter.getMob() != null
+					&& !(fighter instanceof SummonFighter
+						 && ((SummonFighter) fighter).isLootForInvoker())
+					&& fighter.getMob().getTemplate().getId() != ENUTROF_CHEST_ID) {
+				iterator.remove();
+			}
             if (fighter instanceof CloneFighter) iterator.remove();
         }
 
@@ -4569,17 +4837,60 @@ public class Fight {
             Collections.sort(winners);
             Map<Integer, StringBuilder> gains = new HashMap<>();
 
-            //region Drop
-            // Calcul the total prospecting.
-            int totalProspecting = 0;
-            double challengeFactor = 0, starFactor = this.getMobGroup() != null ? (((double)this.getMobGroup().getStarBonus() / 100D) + 1) : 1;
+            
 
-            for (Fighter fighter : winners) {
-                if(!fighter.canLoot()) {
-                    continue;
-                }
-                totalProspecting += fighter.getPros();
-            }
+//region Drop
+
+	// Calcul de la prospection totale utilisée pour le système de drop.
+	// Les invocations configurées pour le loot sont incluses,
+	// y compris lorsqu'elles sont mortes pendant le combat.
+	int totalProspecting = 0;
+
+	// Bonus provenant des étoiles du groupe de monstres.
+	// Le facteur minimum est 1 : les étoiles ne peuvent jamais réduire les drops.
+	double starFactor = this.getMobGroup() != null
+			? (((double) this.getMobGroup().getStarBonus() / 100D) + 1)
+			: 1;
+
+	// Bonus provenant des challenges.
+	// 1 = aucun bonus avant application des challenges réussis.
+	double challengeFactor = 1;
+
+	for (Fighter fighter : winners) {
+
+		// Une invocation configurée pour le loot continue de contribuer
+		// à la prospection même si elle est morte pendant le combat.
+		if (!fighter.canLoot()) {
+			continue;
+		}
+
+		// getPros() correspond à la prospection finale de ce combattant.
+		// C'est donc cette valeur qui est utilisée pour le calcul des drops.
+		totalProspecting += fighter.getPros();
+	}
+
+	if (starFactor < 1)
+		starFactor = 1;
+
+	if (totalProspecting < 0)
+		totalProspecting = 0;
+
+	// Calcul du bonus de drop provenant des challenges réussis.
+	if (this.getType() == Constant.FIGHT_TYPE_PVM && !this.getAllChallenges().isEmpty()) {
+		for (Challenge challenge : this.getAllChallenges().values()) {
+			if (challenge.getWin())
+				challengeFactor += challenge.getDrop();
+		}
+	}
+
+	if (challengeFactor < 1)
+		challengeFactor = 1;
+
+	// Conversion du pourcentage de bonus en multiplicateur.
+	// Exemple : 100 points de challenge -> ×2.
+	challengeFactor = 1 + challengeFactor / 100;
+
+	totalProspecting = (int) (totalProspecting * challengeFactor);
 
             if (starFactor < 1) starFactor = 1;
             if (totalProspecting < 0) totalProspecting = 0;
@@ -4785,14 +5096,34 @@ public class Fight {
 
             long t = System.currentTimeMillis();
             //region Winners
-            for (Fighter i : winners) {
-                if (i.isInvocation() && i.getMob() != null && i.getMob().getTemplate().getId() != 285)
-                    continue;
+			for (Fighter i : winners) {
+
+				// Une invocation normale n'obtient pas de récompense.
+				// Le coffre animé et nos invocations "lootForInvoker" sont
+				// conservés afin de participer au calcul du butin.
+				if (i.isInvocation()
+						&& i.getMob() != null
+						&& !(i instanceof SummonFighter
+							 && ((SummonFighter) i).isLootForInvoker())
+						&& i.getMob().getTemplate().getId() != ENUTROF_CHEST_ID) {
+					continue;
+				}
                 if (i instanceof CloneFighter)
                     continue;
 
                 final Player player = i.getPlayer();
+				if (player != null && this.getType() == Constant.FIGHT_TYPE_PVM) {
+						for (Fighter loser : loosers) {
+							// Seuls les vrais monstres ennemis sont concernés.
+							if (loser.getTeam() != 1)
+								continue;
 
+							if (loser.getMob() == null)
+								continue;
+
+							tryDropMonsterCard(i, loser);
+						}
+					}
                 if (player != null && getType() != Constant.FIGHT_TYPE_CHALLENGE)
                     player.calculTurnCandy();
                 if (getType() == Constant.FIGHT_TYPE_PVT || getType() == Constant.FIGHT_TYPE_PVM || getType() == Constant.FIGHT_TYPE_CHALLENGE || getType() == Constant.FIGHT_TYPE_DOPEUL) {
@@ -4998,7 +5329,13 @@ public class Fight {
                             }
                         }
                     }
-                    if (player != null || i.getMob() != null && i.getMob().getTemplate().getId() == ENUTROF_CHEST_ID) {
+											// Les joueurs, le coffre animé et les invocations configurées
+						// pour le loot exécutent la partie récompenses/drop.
+						if (player != null
+								|| (i.isInvocation()
+									&& i.getInvocator() != null
+									&& i.getInvocator().getPlayer() != null
+									&& i.canLoot())) {
                         if (player != null) {
                             if (this.getTrainerWinner() != -1 && i.getId() == this.getTrainerWinner() && player.getMount() == null) {
                                 int color = Formulas.getCouleur(amande, rousse, doree);
@@ -5058,6 +5395,31 @@ public class Fight {
                             drops.append(entry.getKey()).append("~").append(entry.getValue());
                             dropsToAttribute.put(objectTemplate, entry.getValue());
                         }
+						// Ajoute les cartes de monstres dans les drops affichés en fin de combat.
+						// Ajoute les cartes de monstres aux drops affichés en fin de combat.
+						if (player != null) {
+							Map<Integer, Integer> cardDrops = monsterCardDrops.remove(player.getId());
+
+							if (cardDrops != null) {
+								for (Entry<Integer, Integer> entry : cardDrops.entrySet()) {
+									ObjectTemplate cardTemplate = World.world.getObjTemplate(entry.getKey());
+
+									if (cardTemplate == null)
+										continue;
+
+									if (drops.length() > 0)
+										drops.append(",");
+
+									drops.append(entry.getKey())
+										 .append("~")
+										 .append(entry.getValue());
+
+									// Permet également au système générique de récompense
+									// de connaître cette carte.
+									dropsToAttribute.put(cardTemplate, entry.getValue());
+								}
+							}
+						}
 
                         TimerWaiter.addNext(() -> {
                             for (Entry<ObjectTemplate, Integer> entry : dropsToAttribute.entrySet()) {
@@ -5320,8 +5682,13 @@ public class Fight {
                 }
             }
 
-            Collections.shuffle(winners);
-            Map<Integer, Integer> invoks = new HashMap<>();
+			// Affiche les valeurs de prospection finales après le calcul
+			// des récompenses, afin de vérifier exactement les valeurs
+			// utilisées par le système de drop.
+			sendFinalProspectionTeam0();
+
+			Collections.shuffle(winners);
+			Map<Integer, Integer> invoks = new HashMap<>();
 
             winners.stream()
                     .filter(i -> i.isInvocation() && i.getMob() != null)
@@ -5345,7 +5712,15 @@ public class Fight {
                 if (i instanceof CloneFighter)
                     continue;
 
-                final Player player = i.getPlayer();
+								// Pour une invocation "lootForInvoker", le joueur récompensé est
+				// son invocateur. Ainsi le drop, les kamas et les récompenses
+				// reviennent au personnage qui possède l'invocation.
+				final Player player = i.getPlayer() != null
+						? i.getPlayer()
+						: (i.isInvocation()
+							&& i.getInvocator() != null
+							? i.getInvocator().getPlayer()
+							: null);
 
                 if (player != null && this.getType() != Constant.FIGHT_TYPE_CHALLENGE)
                     player.calculTurnCandy();

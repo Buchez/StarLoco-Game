@@ -10,6 +10,8 @@ import org.starloco.locos.database.data.game.*;
 import org.starloco.locos.database.data.login.*;
 import org.starloco.locos.kernel.Config;
 import org.starloco.locos.kernel.Main;
+// import class monster
+import org.starloco.locos.database.data.game.MonsterCardData;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -97,6 +99,9 @@ public class DatabaseManager {
         this.daos.add(new TrunkData(this.game));
         this.daos.add(new CraftData(this.game));
         this.daos.add(new DropData(this.game));
+        // Charge les associations monstre -> carte utilisées par le système d'invocation.
+        this.daos.add(new MonsterCardData(this.game));
+		this.daos.add(new PlayerMonsterCardData(this.game));
         this.daos.add(new ExtraMonsterData(this.game));
         this.daos.add(new FullMorphData(this.game));
         this.daos.add(new GiftData(this.game));

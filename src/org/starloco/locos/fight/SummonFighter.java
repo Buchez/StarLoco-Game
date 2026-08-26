@@ -6,46 +6,92 @@ import org.starloco.locos.kernel.Constant;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Stream;
 
 public class SummonFighter extends MobFighter {
+
     protected Fighter summoner;
+
+    // Indique si cette invocation doit participer au calcul du butin
+    // et transmettre les récompenses à son invocateur.
+    private boolean lootForInvoker = false;
 
     protected SummonFighter(int id, Fight f, MonsterGrade mobGrade, Fighter summoner) {
         super(id, f, mobGrade);
         this.summoner = summoner;
     }
 
+    // Active ou désactive la participation de l'invocation au butin.
+    public void setLootForInvoker(boolean lootForInvoker) {
+        this.lootForInvoker = lootForInvoker;
+    }
+
+    // Indique si cette invocation doit être prise en compte dans le calcul du butin.
+    public boolean isLootForInvoker() {
+        return this.lootForInvoker;
+    }
+
     @Override
     public Stats getBaseStats() {
-        if(!(summoner instanceof PlayerFighter)) return super.getBaseStats();
 
-        // Summons from player have a bonus
-        Map<Integer, Integer> stats = new HashMap<>(super.getBaseStats().getEffects());
+        // Pour une invocation appartenant à un joueur, ses caractéristiques
+        // principales sont basées sur 10 % des statistiques du joueur.
+        // Les PA, PM et résistances restent ceux du monstre invoqué.
+        if (!(summoner instanceof PlayerFighter))
+            return super.getBaseStats();
 
-//        if (mobID == 264 && caster.getMob() != null)
-//            pdvMax = 425;
-//        if (mobID == 114 && caster.getMob() != null)
-//            pdvMax = 35;
-//        if (mobID == 115 && caster.getMob() != null)
-//            pdvMax = 90;
-//        if (mobID == 262 && caster.getPlayer() != null)
-//            pdvMax = 225;
-//        if (mobID == 246 && caster.getPlayer() != null)
-//            pdvMax = 80;
-//        if (mobID == 1108 && caster.getPlayer() != null)
-//            pdvMax = 490;
+        PlayerFighter playerFighter = (PlayerFighter) summoner;
 
-        // https://www.dofus.com/fr/forum/1003-divers/293131-calculer-vie-invoquations
-        double summonerBoost = 1 + (summoner.getLvl() / 100D);
-        Stream.of(
+        // On part des statistiques natives du monstre.
+        Map<Integer, Integer> stats =
+                new HashMap<>(super.getBaseStats().getEffects());
+
+        // On récupère les statistiques complètes du joueur pendant le combat.
+        Stats playerStats = playerFighter.getTotalStats();
+
+        // Coefficient demandé : 10 % des statistiques du joueur.
+        final double SUMMON_STAT_RATIO = 0.10D;
+
+        // Vitalité minimale de l'invocation.
+        // L'invocation possède toujours 50 PV de base auxquels on ajoute
+        // 10 % de la Vitalité du joueur.
+        final int BASE_SUMMON_VITALITY = 5;
+
+        // Ces caractéristiques proviennent à 10 % du joueur.
+        // Les PA, PM et résistances ne sont volontairement PAS modifiés :
+        // ils restent ceux du MonsterGrade.
+        int[] playerBasedStats = {
             Constant.STATS_ADD_SAGE,
-            Constant.STATS_ADD_FORC,
             Constant.STATS_ADD_INTE,
+            Constant.STATS_ADD_FORC,
             Constant.STATS_ADD_CHAN,
             Constant.STATS_ADD_AGIL,
-            Constant.STATS_ADD_VITA)
-                .forEach(stat -> stats.put(stat, (int)Math.floor(stats.get(stat) * summonerBoost)));
+            Constant.STATS_ADD_PROS,
+            Constant.STATS_ADD_DOMA,
+            Constant.STATS_ADD_SOIN,
+            Constant.STATS_ADD_PERDOM,
+            Constant.STATS_ADD_INIT
+        };
+
+        for (int stat : playerBasedStats) {
+            int playerValue = playerStats.getEffect(stat);
+
+            // L'invocation reçoit 10 % de la valeur du joueur.
+            stats.put(
+                stat,
+                (int) Math.floor(playerValue * SUMMON_STAT_RATIO)
+            );
+        }
+
+        // Vitalité spéciale :
+        // 50 PV de base + 10 % de la Vitalité du joueur.
+        int playerVitality =
+                playerStats.getEffect(Constant.STATS_ADD_VITA);
+
+        int summonVitality =
+                BASE_SUMMON_VITALITY
+                + (int) Math.floor(playerVitality * SUMMON_STAT_RATIO);
+
+        stats.put(Constant.STATS_ADD_VITA, summonVitality);
 
         return new Stats(stats);
     }

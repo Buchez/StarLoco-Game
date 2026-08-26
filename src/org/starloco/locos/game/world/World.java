@@ -43,6 +43,7 @@ import org.starloco.locos.script.DataScriptVM;
 import org.starloco.locos.script.Scripted;
 import org.starloco.locos.script.proxy.SWorld;
 import org.starloco.locos.util.TimerWaiter;
+import org.starloco.locos.database.data.game.MonsterCardData;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -365,6 +366,11 @@ public class World implements Scripted<SWorld> {
 
         DatabaseManager.get(DropData.class).loadFully();
         logger.debug("The drops were loaded successfully.");
+		
+		// Charge les cartes de monstres après les drops.
+		// Les associations seront ensuite disponibles dans les combats.
+		DatabaseManager.get(MonsterCardData.class).loadFully();
+		logger.debug("The monster card were loaded successfully.");
 
         logger.debug("The mounts were loaded successfully.");
 

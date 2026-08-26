@@ -176,7 +176,11 @@ public class MonsterGrade {
     public int getLevel() {
         return this.level;
     }
-
+	// Permet de définir le niveau d'une invocation sans modifier
+	// le MonsterGrade original enregistré dans les données du monstre.
+	public void setLevel(int level) {
+		this.level = level;
+	}
     public int getPdv() {
         return this.pdv;
     }

@@ -75,7 +75,16 @@ public class MobFighter extends Fighter {
 
 
     @Override
-    boolean canLoot() { return isInvocation() && mobGrade.getTemplate().getId() == ENUTROF_CHEST_ID; }
+		// Le coffre animé et les invocations marquées "lootForInvoker"
+	// sont autorisés à participer au calcul du butin.
+	boolean canLoot() {
+		return isInvocation()
+				&& (
+					mobGrade.getTemplate().getId() == ENUTROF_CHEST_ID
+					|| (this instanceof SummonFighter
+						&& ((SummonFighter) this).isLootForInvoker())
+				);
+	}
 
     @Override
     int minKamasReward() { return mobGrade.getTemplate().getMinKamas(); }

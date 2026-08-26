@@ -1,0 +1,1047 @@
+﻿===== DatabaseManager =====
+package org.starloco.locos.database;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import org.slf4j.LoggerFactory;
+import org.starloco.locos.database.data.DAO;
+import org.starloco.locos.database.data.game.*;
+import org.starloco.locos.database.data.login.*;
+import org.starloco.locos.kernel.Config;
+import org.starloco.locos.kernel.Main;
+// import class monster
+import org.starloco.locos.database.data.game.MonsterCardData;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class DatabaseManager {
+
+    private static final DatabaseManager instance = new DatabaseManager();
+
+    private final Logger logger = (Logger) LoggerFactory.getLogger(DatabaseManager.class);
+
+    private final HikariDataSource login, game;
+
+    private final List<DAO<?>> daos = new ArrayList<>();
+
+    /**
+     * Construct the two connection database
+     */
+    public DatabaseManager() {
+        ((Logger) LoggerFactory.getLogger("com.zaxxer.hikari.HikariDataSource")).setLevel(Level.ERROR);
+        ((Logger) LoggerFactory.getLogger("com.zaxxer.hikari.HikariConfig")).setLevel(Level.ERROR);
+        ((Logger) LoggerFactory.getLogger("com.zaxxer.hikari.pool.HikariPool")).setLevel(Level.ERROR);
+        ((Logger) LoggerFactory.getLogger("DEBUG com.zaxxer.hikari.pool.PoolBase")).setLevel(Level.ERROR);
+
+        logger.trace("Reading database config");
+        this.login = this.createHikariDataSource(Config.databaseLoginHost, String.valueOf(Config.databaseLoginPort), Config.databaseLoginName, Config.databaseLoginUser, Config.databaseLoginPass);
+        logger.debug("Connection to the login database, ok");
+        this.game = this.createHikariDataSource(Config.databaseGameHost, String.valueOf(Config.databaseGamePort), Config.databaseGameName, Config.databaseGameUser, Config.databaseGamePass);
+        logger.debug("Connection to the game database, ok");
+        this.initialize();
+        logger.debug("All data have been initialized");
+        logger.setLevel(Level.ERROR);
+    }
+
+    public boolean isConnected() {
+        try {
+            return login != null && login.getConnection() != null && !login.getConnection().isClosed() &&
+                    game != null && game.getConnection() != null && !game.getConnection().isClosed();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
+     *  Initialiazation of all entities table
+     */
+    private void initialize() {
+
+        //region login data
+        this.daos.add(new AccountData(this.login));
+        this.daos.add(new EventData(this.login));
+        this.daos.add(new PlayerData(this.login));
+        this.daos.add(new AdData(this.login));
+        this.daos.add(new ServerData(this.login));
+        this.daos.add(new BanIpData(this.login));
+        this.daos.add(new BaseAreaData(this.login));
+        this.daos.add(new BaseSubAreaData(this.login));
+        this.daos.add(new GuildData(this.login));
+        this.daos.add(new BaseHouseData(this.login));
+        this.daos.add(new BaseTrunkData(this.login));
+        this.daos.add(new MountData(this.login));
+        this.daos.add(new BaseMountParkData(this.login));
+        this.daos.add(new ObjectData(this.login));
+        this.daos.add(new ObvijevanData(this.login));
+        this.daos.add(new PetData(this.login));
+        //endregion
+
+        //region game data
+        this.daos.add(new AreaData(this.game));
+        this.daos.add(new AuctionData(this.game));
+        this.daos.add(new GangsterData(this.game));
+        this.daos.add(new BankData(this.game));
+        this.daos.add(new TrunkData(this.game));
+        this.daos.add(new GuildMemberData(this.game));
+        this.daos.add(new BigStoreListingData(this.game));
+        this.daos.add(new HouseData(this.game));
+        this.daos.add(new MountParkData(this.game));
+        this.daos.add(new CollectorData(this.game));
+        this.daos.add(new PrismData(this.game));
+        this.daos.add(new SubAreaData(this.game));
+        this.daos.add(new AreaData(this.game));
+        this.daos.add(new ChallengeData(this.game));
+        this.daos.add(new TrunkData(this.game));
+        this.daos.add(new CraftData(this.game));
+        this.daos.add(new DropData(this.game));
+        // Charge les associations monstre -> carte utilisÃ©es par le systÃ¨me d'invocation.
+        this.daos.add(new MonsterCardData(this.game));
+        this.daos.add(new ExtraMonsterData(this.game));
+        this.daos.add(new FullMorphData(this.game));
+        this.daos.add(new GiftData(this.game));
+        this.daos.add(new HdvData(this.game));
+        this.daos.add(new HouseData(this.game));
+        this.daos.add(new ObjectTemplateData(this.game));
+        this.daos.add(new ObjectSetData(this.game));
+        this.daos.add(new JobData(this.game));
+        this.daos.add(new MonsterData(this.game));
+        this.daos.add(new MountParkData(this.game));
+        this.daos.add(new NpcData(this.game));
+        this.daos.add(new ObjectActionData(this.game));
+        this.daos.add(new PetTemplateData(this.game));
+        this.daos.add(new RuneData(this.game));
+        this.daos.add(new SubAreaData(this.game));
+        this.daos.add(new SpellData(this.game));
+        this.daos.add(new ZaapiData(this.game));
+        this.daos.add(new HeroicMobsGroupsData(this.game));
+        this.daos.add(new QuestProgressData(this.game));
+        //endregion
+    }
+
+    /**
+     * Create and try to connect to them
+     * @param host ip address of database
+     * @param port port of database
+     * @param database name
+     * @param user of the database
+     * @param pass of the database
+     * @return connection or null
+     */
+    private HikariDataSource createHikariDataSource(String host, String port, String database, String user, String pass) {
+        HikariConfig config = new HikariConfig();
+        config.setDataSourceClassName("com.mysql.jdbc.jdbc2.optional.MysqlDataSource");
+        config.addDataSourceProperty("serverName", host);
+        config.addDataSourceProperty("port", port);
+        config.addDataSourceProperty("databaseName", database);
+        config.addDataSourceProperty("user", user);
+        config.addDataSourceProperty("password", pass);
+        config.setAutoCommit(true); // AutoCommit, c'est cool
+        config.setMaximumPoolSize(20);
+        config.setMinimumIdle(1);
+        HikariDataSource source = new HikariDataSource(config);
+
+        if (!this.tryConnection(source)) {
+            logger.error("Please check your username and password and database connection");
+            Main.stop("statics try connection failed");
+            return null;
+        }
+
+        return source;
+    }
+
+    /**
+     * @param dataSource Hikari config
+     * @return true if it's ok, otherwise false
+     */
+    private boolean tryConnection(HikariDataSource dataSource) {
+        try {
+            Connection connection = dataSource.getConnection();
+            connection.close();
+            return true;
+        } catch (Exception e) {
+            logger.error("error when trying to connect to data source", e);
+            return false;
+        }
+    }
+
+    /**
+     * @param c the entity class of the dao
+     * @return dao class of the entity
+     */
+    public static <D extends DAO<T>,T> D get(Class<D> c) {
+        for(DAO<?> dao : instance.daos) {
+            if(dao.getReferencedClass().equals(c))
+                return (D) dao;
+        }
+        return null;
+    }
+
+    public static DatabaseManager getInstance() {
+        return instance;
+    }
+}
+===== FunctionDAO =====
+package org.starloco.locos.database.data;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import com.zaxxer.hikari.HikariDataSource;
+import org.slf4j.LoggerFactory;
+
+import java.sql.*;
+
+/**
+ * Created by Locos on 14/07/2017.
+ */
+public abstract class FunctionDAO<T> implements DAO<T> {
+    public interface ResultSetFunction<R> {
+        R apply(ResultSet rs) throws SQLException;
+    }
+    public interface ResultSetConsumer {
+        void apply(ResultSet rs) throws SQLException;
+    }
+
+    private final Object locker = new Object();
+    private String tableName;
+    protected HikariDataSource dataSource;
+    protected Logger logger = (Logger) LoggerFactory.getLogger(this.getReferencedClass());
+
+    public FunctionDAO(HikariDataSource dataSource) {
+        this.dataSource = dataSource;
+        logger.setLevel(Level.ERROR);
+    }
+
+    public FunctionDAO(HikariDataSource dataSource, String tableName) {
+        this.dataSource = dataSource;
+        this.tableName = tableName;
+        logger.setLevel(Level.ERROR);
+    }
+
+    public String getTableName() {
+        return "`" + tableName + "`";
+    }
+
+    protected Connection getConnection() throws SQLException {
+        return dataSource.getConnection();
+    }
+
+    protected void execute(String query) {
+        synchronized (locker) {
+            try(Connection connection = this.getConnection()){
+                try(Statement statement = connection.createStatement()) {
+                    statement.execute(query);
+                    logger.debug("SQL request executed successfully {}", query);
+                }
+            } catch (SQLException e) {
+                logger.error("Can't execute SQL Request :" + query, e);
+            }
+        }
+    }
+
+    protected void execute(PreparedStatement statement) {
+        synchronized (locker) {
+            try {
+                statement.execute();
+                logger.debug("SQL request executed successfully {}", statement.toString());
+            } catch (SQLException e) {
+                logger.error("Can't execute SQL Request :" + statement.toString(), e);
+            }
+        }
+    }
+
+    protected PreparedStatement getPreparedStatement(String query) throws SQLException {
+        try {
+            return this.getConnection().prepareStatement(query);
+        } catch (SQLException e) {
+            logger.error("Can't execute prepared statement on datasource connection", e);
+            return null;
+        }
+    }
+
+    protected void getData(String query, ResultSetConsumer consumer) throws SQLException {
+        synchronized (locker){
+            try (Connection conn = dataSource.getConnection()) {
+                try (Statement stat = conn.createStatement()) {
+                    consumer.apply(stat.executeQuery(query));
+                }
+            }
+        }
+    }
+
+    protected <R> R getData(String query, ResultSetFunction<R> consumer) throws SQLException {
+        synchronized (locker){
+            try(Connection conn = dataSource.getConnection()) {
+                try(Statement stat = conn.createStatement()) {
+                    return consumer.apply(stat.executeQuery(query));
+                }
+            }
+        }
+    }
+
+    protected void close(PreparedStatement statement) {
+        if (statement != null) {
+            try {
+                if (!statement.isClosed()) {
+                    statement.clearParameters();
+                    statement.close();
+                    Connection connection = statement.getConnection();
+                    if (connection != null && !connection.isClosed()) {
+                        connection.close();
+                        logger.trace("{} released", connection);
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("Can't close statement", e);
+            }
+        }
+    }
+
+    protected void sendError(Exception e) {
+        logger.error("Error in " + this.getReferencedClass().getName() + " : " + e.getMessage(), e);
+    }
+}
+===== PlayerMonster-related registrations =====
+
+Path                                                                                        LineNumber Line            
+----                                                                                        ---------- ----            
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\area\map\GameCase.java                             948 //           ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\area\map\GameCase.java                             955 //           ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\area\map\GameMap.java                              208              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\area\map\GameMap.java                              216              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\area\map\GameMap.java                              224              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\area\map\ScriptMapData.java                         74         retur...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\auction\AuctionManager.java                        187              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\auction\AuctionManager.java                        195              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\auction\AuctionManager.java                        199              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\auction\AuctionManager.java                        342              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                 99         if (D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                100             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                152         point...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                157         World...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                168         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                176         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                186         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                221         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                261         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                269         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                338             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                350             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                402             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                413             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                482         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                483         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                490             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                493              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                507             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                511         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                523             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                540         GiftD...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                561         Quest...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Account.java                                577         Quest...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 486             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 534         if (!...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 567         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 569             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 577         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 587             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 747         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 776         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 805             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 828         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 862         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 875             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 886             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 897             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 918             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 931             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 948         _allT...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                 965         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1333              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1348         excha...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1475              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1490         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1522             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1535              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1555              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1569             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1668             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1682         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1709         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1728         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1777         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1884         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                1937         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                2456             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                2508         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                2643             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                2942         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                3097         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                3317         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                3346         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                3417         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                3512         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                3513         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                3609         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                3610         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                4069              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                4075              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                4199             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                4561         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                4637         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                4711         int r...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                4762         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                4996         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                5047         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                5213         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                5403         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                5513         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                5624              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                5626             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\client\Player.java                                5638         Datab...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                          157             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                          160             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                          787              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                          794             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                          822              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                          859              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                          867              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                          899              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                          912             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                          932             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                          933             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                          939              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                          952             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         1566             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         1576              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         1582             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         1795              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         1796              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         1799              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         1802              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         1803              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         1816              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         1819              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         1822              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         2354             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         2406              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         2408              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         2410              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         2478             i...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         2503             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         2539             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         2654             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         2761              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         2779              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         2961             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\CommandAdmin.java                         2997             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\command\administration\Group.java                   49 //        Dat...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       65         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       66         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       67         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       68         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       69         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       70         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       71         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       72         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       73         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       74         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       75         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       76         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       77         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       78         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       79         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       80         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       84         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       85         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       86         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       87         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       88         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       89         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       90         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       91         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       92         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       93         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       94         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       95         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       96         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       97         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       98         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                       99         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      100         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      102         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      103         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      104         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      105         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      106         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      107         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      108         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      109         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      110         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      111         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      112         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      113         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      114         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      115         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      116         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      117         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      118         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      119         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      120         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\DatabaseManager.java                      121         this....
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\game\BigStoreListingData.java         74             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\game\BigStoreListingData.java         94              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\game\GiftData.java                    25             r...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\game\HouseData.java                  119             (...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\login\AccountData.java                36              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\login\AccountData.java                37              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\login\AccountData.java                40              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\login\BaseMountParkData.java          27 					((MountP...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\login\BaseMountParkData.java          42 				((MountPa...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\login\BaseTrunkData.java              33              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\login\BaseTrunkData.java              69              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\login\BaseTrunkData.java              92              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\login\BaseTrunkData.java             101              ...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\login\MountData.java                 123         ((Pla...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\login\PlayerData.java                 64             D...
+E:\dofusAI\StarLoco-Game\src\org\starloco\locos\database\data\login\PlayerData.java                138             O...
+===== Player =====
+
+import org.starloco.locos.area.Area;
+import org.starloco.locos.area.SubArea;
+import org.starloco.locos.area.map.Actor;
+import org.starloco.locos.area.map.GameCase;
+import org.starloco.locos.area.map.GameMap;
+import org.starloco.locos.entity.map.House;
+import org.starloco.locos.entity.map.MountPark;
+import org.starloco.locos.entity.map.Trunk;
+import org.starloco.locos.client.other.Party;
+import org.starloco.locos.client.other.Stalk;
+import org.starloco.locos.client.other.Stats;
+import org.starloco.locos.command.administration.Group;
+import org.starloco.locos.common.Formulas;
+import org.starloco.locos.common.SocketManager;
+import org.starloco.locos.database.DatabaseManager;
+import org.starloco.locos.database.data.game.*;
+import org.starloco.locos.database.data.login.AccountData;
+import org.starloco.locos.database.data.login.ObjectData;
+import org.starloco.locos.database.data.login.PlayerData;
+import org.starloco.locos.dynamic.Start;
+import org.starloco.locos.entity.Collector;
+import org.starloco.locos.entity.Prism;
+import org.starloco.locos.entity.mount.Mount;
+import org.starloco.locos.entity.pet.Pet;
+import org.starloco.locos.entity.pet.PetEntry;
+import org.starloco.locos.event.EventManager;
+import org.starloco.locos.fight.Fight;
+import org.starloco.locos.fight.Fighter;
+import org.starloco.locos.fight.spells.Spell;
+import org.starloco.locos.fight.spells.SpellEffect;
+import org.starloco.locos.game.GameClient;
+import org.starloco.locos.game.GameServer;
+import org.starloco.locos.game.action.ExchangeAction;
+import org.starloco.locos.game.action.GameAction;
+import org.starloco.locos.game.action.type.DocumentActionData;
+import org.starloco.locos.game.action.type.NpcDialogActionData;
+import org.starloco.locos.game.action.type.ScenarioActionData;
+import org.starloco.locos.game.world.World;
+import org.starloco.locos.guild.GuildMember;
+import org.starloco.locos.job.Job;
+import org.starloco.locos.job.JobAction;
+import org.starloco.locos.job.JobConstant;
+import org.starloco.locos.job.JobStat;
+import org.starloco.locos.kernel.Config;
+import org.starloco.locos.kernel.Constant;
+import org.starloco.locos.kernel.Main;
+import org.starloco.locos.kernel.Reboot;
+import org.starloco.locos.lang.LangEnum;
+import org.starloco.locos.object.GameObject;
+import org.starloco.locos.object.ItemHash;
+import org.starloco.locos.object.ObjectSet;
+import org.starloco.locos.object.ObjectTemplate;
+import org.starloco.locos.other.Action;
+import org.starloco.locos.guild.Guild;
+import org.starloco.locos.quest.QuestProgress;
+import org.starloco.locos.quest.QuestInfo;
+import org.starloco.locos.script.DataScriptVM;
+import org.starloco.locos.script.Scripted;
+import org.starloco.locos.script.proxy.SPlayer;
+import org.starloco.locos.util.Pair;
+import org.starloco.locos.util.TimerWaiter;
+import org.starloco.locos.database.data.game.SaleOffer.Currency;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static org.starloco.locos.kernel.Constant.INCARNAM_SUPERAREA;
+
+public class Player implements Scripted<SPlayer>, Actor {
+    private static final int MAX_BASIC_JOBS = 3;
+    private static final int MIN_JOB_LVL_FOR_NEW_JOB = 30;
+    private static final int MIN_JOB_FOR_SPECIALTY = 65;
+
+    public static final short maxEnergy = 10000;
+
+    private final SPlayer scriptVal;
+
+    public Stats stats;
+    //Job
+    //Disponibilitï¿½
+    public boolean _isAbsent = false;
+    public boolean _isInvisible = false;
+    //Suiveur - Suivi
+    public Map<Integer, Player> follower = new HashMap<>();
+    public Player follow = null;
+    //Prison Alignement :
+    public boolean isInEnnemyFaction;
+    public long enteredOnEnnemyFaction;
+    public boolean donjon;
+    //Commande hï¿½hï¿½
+    public int thatMap = -1;
+    public int thatCell = -1;
+    public boolean walkFast = false;
+    public boolean getCases = false;
+    public ArrayList<Integer> thisCases = new ArrayList<>();
+    public boolean mpToTp = false;
+    public boolean noall = false;
+    private int id;
+    private String name;
+    private int sexe;
+    private int classe;
+    private int color1;
+    private int color2;
+    private int color3;
+    private int level;
+    private int energy;
+    private long exp;
+    private int curPdv;
+    private int maxPdv;
+    private Stats statsParcho = new Stats(true);
+    private long kamas;
+    private int _spellPts;
+    private int _capital;
+===== Fight auto summon =====
+        }
+
+        if (getType() == Constant.FIGHT_TYPE_PVT && getCollector() != null)
+            getCollector().setInFight((byte) 2);
+
+        setState(Constant.FIGHT_STATE_ACTIVE);
+        setStartTime(System.currentTimeMillis());
+        SocketManager.GAME_SEND_GAME_REMFLAG_PACKET_TO_MAP(getMapOld(), this.init0.getId());
+
+        for (Fighter fighter : this.getFighters(3)) {
+            Player player = fighter.getPlayer();
+
+            if (player != null) {
+                player.refreshObjectsClass();
+            }
+        }
+
+        if (isHaveKnight() && getType() == Constant.FIGHT_TYPE_AGRESSION)
+            addChevalier();
+
+        this.checkTimer = false;
+        SocketManager.GAME_SEND_GIC_PACKETS_TO_FIGHT(this, 7);
+        SocketManager.GAME_SEND_GS_PACKET_TO_FIGHT(this, 7);
+		initOrderPlaying();
+		// add pour auto summon boufton blanc
+		for (Fighter fighter : new ArrayList<>(getFighters(3))) {
+			if (fighter.getPlayer() != null && !fighter.isDead()) {
+				autoSummonMonster(fighter, 972, fighter.getLvl());
+			}
+		}
+
+		setCurPlayer(-1);
+        SocketManager.GAME_SEND_GTL_PACKET_TO_FIGHT(this, 7);
+        SocketManager.GAME_SEND_GTM_PACKET_TO_FIGHT(this, 7);
+
+        /** Challenges **/
+        if (getType() == Constant.FIGHT_TYPE_PVM
+                || getType() == Constant.FIGHT_TYPE_DOPEUL) {
+            boolean hasMale = false, hasFemale = false, hasIndirectDamage = false;
+            boolean hasCawotte = false, hasChafer = false, hasRoulette = false, hasArakne = false, hasArround = false;
+            boolean severalEnnemies, severalAllies, bothSexes, EvenEnnemies, MoreEnnemies, ecartLvlPlayer = false;
+            int hasBoss = -1;
+
+            if (this.team0.size() > 1) {
+                int lowLvl1 = 201, lowLvl2 = 201;
+===== Existing monster card system =====
+package org.starloco.locos.database.data.game;
+
+import com.zaxxer.hikari.HikariDataSource;
+import org.apache.commons.lang.NotImplementedException;
+import org.starloco.locos.database.data.FunctionDAO;
+import org.starloco.locos.game.world.World;
+import org.starloco.locos.kernel.Main;
+
+import java.sql.SQLException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Gestion des cartes de monstres.
+ *
+ * Cette classe charge la correspondance :
+ *
+ *     monster_id -> card_item_id
+ *
+ * Exemple :
+ *
+ *     972 -> 16267
+ *
+ * signifie que le Jeune Boufton Blanc (monster_id 972)
+ * possÃ¨de la carte item 16267.
+ *
+ * La table SQL est volontairement gÃ©nÃ©rique afin de pouvoir
+ * gÃ©rer tous les monstres du jeu sans modifier le code Java
+ * pour chaque nouveau monstre.
+ */
+public class MonsterCardData extends FunctionDAO<Object> {
+
+    /**
+     * Correspondance en mÃ©moire :
+     *
+     * monsterId -> cardItemId
+     */
+    private final Map<Integer, Integer> cards = new HashMap<>();
+
+    public MonsterCardData(HikariDataSource dataSource) {
+        super(dataSource, "monster_cards");
+    }
+
+    /**
+     * Charge toutes les cartes depuis MariaDB au dÃ©marrage du serveur.
+     */
+    @Override
+    public void loadFully() {
+        try {
+            getData(
+                    "SELECT monster_id, card_item_id " +
+                    "FROM " + getTableName() + " " +
+                    "WHERE enabled = 1;",
+                    result -> {
+
+                        cards.clear();
+
+                        while (result.next()) {
+                            int monsterId = result.getInt("monster_id");
+                            int cardItemId = result.getInt("card_item_id");
+
+                            cards.put(monsterId, cardItemId);
+                        }
+                    }
+            );
+
+            System.out.println(
+                    "[MonsterCardData] " +
+                    cards.size() +
+                    " carte(s) de monstre chargÃ©e(s)."
+            );
+
+        } catch (SQLException e) {
+            super.sendError(e);
+            Main.stop("Can't load monster cards");
+        }
+    }
+
+    /**
+     * Retourne l'ID de l'item correspondant Ã  un monstre.
+     *
+     * @param monsterId identifiant du monstre
+     * @return ID de l'item carte, ou -1 si aucune carte n'existe
+     */
+    public int getCardItemId(int monsterId) {
+        return cards.getOrDefault(monsterId, -1);
+    }
+
+    /**
+     * Indique si une carte existe pour ce monstre.
+     */
+    public boolean hasCard(int monsterId) {
+        return cards.containsKey(monsterId);
+    }
+
+    /**
+     * Permet de consulter toutes les associations chargÃ©es.
+     *
+     * La map retournÃ©e est en lecture seule afin d'Ã©viter
+     * qu'un autre morceau du serveur puisse la modifier
+     * accidentellement.
+     */
+    public Map<Integer, Integer> getCards() {
+        return Collections.unmodifiableMap(cards);
+    }
+
+    @Override
+    public Object load(int id) {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public boolean insert(Object entity) {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public void delete(Object entity) {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public void update(Object entity) {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public Class<?> getReferencedClass() {
+        return MonsterCardData.class;
+    }
+}
+===== Monster =====
+
+import org.starloco.locos.game.world.World;
+import org.starloco.locos.game.world.World.Drop;
+
+import java.util.*;
+
+public class Monster {
+    private final int id;
+    private int gfxId;
+    private int align;
+    private String colors;
+    private int ia;
+    private int minKamas;
+    private int maxKamas;
+    private final Map<Integer, MonsterGrade> grades = new HashMap<>();
+    private final ArrayList<Drop> drops = new ArrayList<>();
+    private boolean capturable, _isBoss, _isArchMonster;
+    private int aggroDistance = 0;
+
+    public Monster(int id, int gfxId, int align, String colors,
+                   String thisGrades, String thisSpells, String thisStats,
+                   String thisStatsInfos, String thisPdvs, String thisPoints,
+                   String thisInit, int minKamas, int maxKamas, String thisXp, int ia,
+                   boolean capturable, int aggroDistance, boolean isBoss, boolean isArchMonster) {
+        this.id = id;
+        this.gfxId = gfxId;
+        this.align = align;
+        this.colors = colors;
+        this.minKamas = minKamas;
+        this.maxKamas = maxKamas;
+        this.ia = ia;
+        this.capturable = capturable;
+        this.aggroDistance = aggroDistance;
+        this._isBoss = isBoss;
+        this._isArchMonster = isArchMonster;
+        int G = 1;
+
+        for (int n = 0; n < 12; n++) {
+            try {
+                //Grades
+                String[] split = thisGrades.split("\\|");
+                String grade = split[n];
+                String[] infos = grade.split("@");
+                int level = Integer.parseInt(infos[0]);
+                String resists = infos[1];
+                //Stats
+                String stats = thisStats.split("\\|")[n];
+                //Spells
+                String spells = "";
+                if (!thisSpells.equalsIgnoreCase("||||")
+                        && !thisSpells.equalsIgnoreCase("")
+                        && !thisSpells.equalsIgnoreCase("-1")) {
+                    spells = thisSpells.split("\\|")[n];
+                    if (spells.equals("-1"))
+                        spells = "";
+                }
+                //PDVMax//init
+                int pdvmax = 1;
+                int init = 1;
+
+                try {
+                    pdvmax = Integer.parseInt(thisPdvs.split("\\|")[n]);
+                    init = Integer.parseInt(thisInit.split("\\|")[n]);
+                } catch (Exception e) {
+                    World.world.logger.error("  > Error : Monster (id:"+ id +", grade: " + n + " : Life or initiative unreadable.", e);
+                }
+                //PA / PM
+                int PA = 3;
+                int PM = 3;
+                int xp = 10;
+
+                try {
+                    String[] pts = thisPoints.split("\\|")[n].split(";");
+                    try {
+                        PA = Integer.parseInt(pts[0]);
+                        PM = Integer.parseInt(pts[1]);
+                        xp = Integer.parseInt(thisXp.split("\\|")[n]);
+                    } catch (Exception e) {
+                        World.world.logger.error("  > Error : Monster (id:"+ id +", grade: " + n + " : PA, PM or experience unreadable.", e);
+                    }
+                } catch (Exception e) {
+                    World.world.logger.error("  > Error : Monster (id:"+ id +", grade: " + n + " : column 'points' unreadable.", e);
+                }
+                grades.put(G, new MonsterGrade(this, G, level, PA, PM, resists, stats, thisStatsInfos, spells, pdvmax, init, xp));
+                G++;
+            } catch (Exception e) {
+                // ok, pour les dopeuls ...
+                //TODO: Enlever toutes les erreurs
+            }
+        }
+    }
+
+    public void setInfos(int gfxId, int align, String colors,
+                         String thisGrades, String thisSpells, String thisStats,
+                         String thisStatsInfos, String thisPdvs, String thisPoints,
+                         String thisInit, int minKamas, int maxKamas, String thisXp, int ia,
+                         boolean capturable, int aggroDistance, boolean isBoss, boolean isArchMonster) {
+        this.gfxId = gfxId;
+        this.align = align;
+        this.colors = colors;
+        this.minKamas = minKamas;
+        this.maxKamas = maxKamas;
+        this.ia = ia;
+        this.capturable = capturable;
+        this.aggroDistance = aggroDistance;
+        int G = 1;
+        grades.clear();
+        for (int n = 0; n < 12; n++) {
+            try {
+                //Grades
+                String[] split = thisGrades.split("\\|");
+                //if(split.length < n)
+                String grade = split[n];
+                String[] infos = grade.split("@");
+                int level = Integer.parseInt(infos[0]);
+                String resists = infos[1];
+                //Stats
+                String stats = thisStats.split("\\|")[n];
+                //Spells
+                String spells = thisSpells.split("\\|")[n];
+                if (spells.equals("-1"))
+                    spells = "";
+                //PDVMax//init
+                int pdvmax = 1;
+                int init = 1;
+
+                try {
+                    pdvmax = Integer.parseInt(thisPdvs.split("\\|")[n]);
+                    init = Integer.parseInt(thisInit.split("\\|")[n]);
+                } catch (Exception e) {
+                    World.world.logger.error("  > Error : Monster (id:"+ id +", grade: " + n + " : Life or initiative unreadable.", e);
+                }
+                //PA / PM
+                int PA = 3;
+                int PM = 3;
+                int xp = 10;
+
+                try {
+                    String[] pts = thisPoints.split("\\|")[n].split(";");
+                    try {
+                        PA = Integer.parseInt(pts[0]);
+                        PM = Integer.parseInt(pts[1]);
+                        xp = Integer.parseInt(thisXp.split("\\|")[n]);
+                    } catch (Exception e) {
+                        World.world.logger.error("  > Error : Monster (id:"+ id +", grade: " + n + " : PA, PM or experience unreadable.", e);
+                    }
+                } catch (Exception e) {
+                    World.world.logger.error("  > Error : Monster (id:"+ id +", grade: " + n + " : column 'points' unreadable.", e);
+                }
+                grades.put(G, new MonsterGrade(this, G, level, PA, PM, resists, stats, thisStatsInfos, spells, pdvmax, init, xp));
+                G++;
+            } catch (Exception e) {
+                // ok pour les dopeuls
+                //e.printStackTrace();
+            }
+        }
+    }
+
+    public int getId() {
+        return this.id;
+    }
+
+    public int getGfxId() {
+        return this.gfxId;
+    }
+
+    public int getAlign() {
+        return this.align;
+    }
+
+    public String getColors() {
+        return this.colors;
+    }
+
+    public int getIa() {
+        return this.ia;
+    }
+
+    public int getMinKamas() {
+        return this.minKamas;
+    }
+
+    public int getMaxKamas() {
+        return this.maxKamas;
+    }
+
+    public Map<Integer, MonsterGrade> getGrades() {
+        return this.grades;
+    }
+
+    public void addDrop(Drop D) {
+        this.drops.add(D);
+    }
+
+    public ArrayList<Drop> getDrops() {
+        return this.drops;
+    }
+
+    public boolean isCapturable() {
+        return this.capturable;
+    }
+
+    public int getAggroDistance() {
+        return this.aggroDistance;
+    }
+
+    public MonsterGrade getGradeByLevel(int lvl) {
+        if(this.getGrades() == null) return null;
+        for (MonsterGrade grade : this.getGrades().values())
+            if (grade != null && grade.getLevel() == lvl)
+                return grade;
+        return null;
+    }
+
+    public MonsterGrade getRandomGrade() {
+        if(this.getGrades() == null) return null;
+        int randomGrade = (int) (Math.random() * (6 - 1)) + 1, random = 1;
+
+        for (MonsterGrade grade : this.getGrades().values()) {
+            if (grade != null && random == randomGrade) return grade;
+            else random++;
+        }
+
+        return null;
+    }
+
+    public boolean isBoss() {
+        return _isBoss;
+    }
+    public boolean isArchMonster() {
+        return _isArchMonster;
+    }
+}
+
+
