@@ -1184,8 +1184,7 @@ public class Fight {
 		for (int position = 0; position <= 2; position++) {
 
 			Integer cardItemId =
-					player.getItemShortcutTemplateId(position);
-
+				fighter.getPlayer().getItemShortcutTemplateId(position);
 			if (cardItemId == null)
 				continue;
 
@@ -1196,7 +1195,7 @@ public class Fight {
 				continue;
 
 			// Vérifie que le joueur possède toujours la carte.
-			if (!player.hasItemTemplate(cardItemId, 1, false))
+			if (!fighter.getPlayer().hasItemTemplate(cardItemId, 1, false))
 				continue;
 
 			autoSummonMonster(
