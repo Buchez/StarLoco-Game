@@ -6328,17 +6328,19 @@ public class GameClient {
 
 				ObjectTemplate template = World.world.getObjTemplate(itemId);
 
-				if (template == null || template.getType() != 123) {
+				MonsterCardData cardData =
+						DatabaseManager.get(MonsterCardData.class);
+
+				if (template == null || cardData == null ||
+						cardData.getMonsterIdByCardItemId(itemId) <= 0) {
+
 					SocketManager.GAME_SEND_MESSAGE(
 							player,
-							"Seules les cartes peuvent être placées dans les 3 premiers slots.",
+							"Seules les cartes de monstre peuvent être placées dans les 3 premiers slots.",
 							"FF0000"
 					);
 					return;
 				}
-
-				MonsterCardData cardData =
-						DatabaseManager.get(MonsterCardData.class);
 
 				if (cardData == null) {
 					send("BN");
