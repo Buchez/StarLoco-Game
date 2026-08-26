@@ -6095,18 +6095,23 @@ public class Fight {
         if (cardItemId <= 0)
             continue;
 
-        ObjectTemplate cardTemplate =
-                World.world.getObjTemplate(cardItemId);
+		ObjectTemplate cardTemplate =
+				World.world.getObjTemplate(cardItemId);
 
-        if (cardTemplate == null)
-            continue;
+		String cardName;
 
-        cards.put(
-                monsterId,
-                "Monstre #" + monsterId
-                        + " → "
-                        + cardTemplate.getName()
-        );
+		if (cardTemplate != null) {
+			cardName = cardTemplate.getName();
+		} else {
+			cardName = "Carte #" + cardItemId;
+		}
+
+		cards.put(
+				monsterId,
+				"Monstre #" + monsterId
+						+ " → "
+						+ cardName
+		);
     }
 
     if (cards.isEmpty())
