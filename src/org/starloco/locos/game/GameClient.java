@@ -6246,7 +6246,12 @@ public class GameClient {
 
 				ObjectTemplate template = item.getTemplate();
 
-				if (template == null || template.getType() != 123) {
+				MonsterCardData cardData =
+						DatabaseManager.get(MonsterCardData.class);
+
+				if (template == null || cardData == null ||
+						cardData.getMonsterIdByCardItemId(template.getId()) <= 0) {
+
 					SocketManager.GAME_SEND_MESSAGE(
 							player,
 							"Vous devez placer une carte de monstre dans cet emplacement.",
@@ -6255,8 +6260,7 @@ public class GameClient {
 					return;
 				}
 
-				MonsterCardData cardData =
-						DatabaseManager.get(MonsterCardData.class);
+		 
 
 				if (cardData == null) {
 					send("BN");
@@ -6320,7 +6324,7 @@ public class GameClient {
 			}
 
 			// Les positions 0, 1 et 2 sont les slots cartes.
-			if (newPos >= 0 && newPos <= 2) {
+			if (newPos >= 1 && newPos <= 3) {
 
 				ObjectTemplate template = World.world.getObjTemplate(itemId);
 
