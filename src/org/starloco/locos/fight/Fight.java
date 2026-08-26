@@ -1175,25 +1175,30 @@ public class Fight {
 		if (fighter.getPlayer() == null || fighter.isDead())
 			continue;
 
-		Player player = fighter.getPlayer();
-
-		PlayerMonsterCardData cardData =
-				DatabaseManager.get(PlayerMonsterCardData.class);
+		 MonsterCardData cardData =
+        DatabaseManager.get(MonsterCardData.class);
 
 		if (cardData == null)
 			continue;
 
-		Map<Integer, Integer> equipped =
-				cardData.getEquippedMonsterIds(player.getId());
+		for (int position = 0; position <= 2; position++) {
 
-		for (Integer monsterId : equipped.values()) {
+			Integer cardItemId =
+					player.getItemShortcutTemplateId(position);
 
-			if (monsterId == null || monsterId <= 0)
+			if (cardItemId == null)
 				continue;
 
-			// On utilise le grade 1 comme base.
-			// autoSummonMonster() copie ensuite le grade et adapte son niveau
-			// à celui de l'invocateur.
+			int monsterId =
+					cardData.getMonsterIdByCardItemId(cardItemId);
+
+			if (monsterId <= 0)
+				continue;
+
+			// Vérifie que le joueur possède toujours la carte.
+			if (!player.hasItemTemplate(cardItemId, 1, false))
+				continue;
+
 			autoSummonMonster(
 					fighter,
 					monsterId,

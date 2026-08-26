@@ -6096,4 +6096,54 @@ public class Player implements Scripted<SPlayer>, Actor {
                 e.second.strStats)
             ).forEach(this::send);
     }
+	
+	public Integer getItemShortcutTemplateId(int position) {
+    ItemHash hash = _itemShortcuts.get(position);
+
+    if (hash == null)
+        return null;
+
+    return hash.templateId;
+	}
+
+	public boolean isMonsterCardShortcutPosition(int position) {
+		return position >= 0 && position <= 2;
+	}
+
+	public boolean isMonsterCardEquipped(int position) {
+		Integer itemId = getItemShortcutTemplateId(position);
+
+		if (itemId == null)
+			return false;
+
+		ObjectTemplate template = World.world.getObjTemplate(itemId);
+
+		return template != null
+				&& template.getType() == 123
+				&& DatabaseManager.get(MonsterCardData.class).getMonsterIdByCardItemId(itemId) > 0;
+	}
+
+	public boolean hasMonsterCardEquippedAtOtherPosition(int monsterId, int exceptPosition) {
+		MonsterCardData cardData = DatabaseManager.get(MonsterCardData.class);
+
+		if (cardData == null)
+			return false;
+
+		for (int position = 0; position <= 2; position++) {
+			if (position == exceptPosition)
+				continue;
+
+			Integer itemId = getItemShortcutTemplateId(position);
+
+			if (itemId == null)
+				continue;
+
+			int equippedMonsterId = cardData.getMonsterIdByCardItemId(itemId);
+
+			if (equippedMonsterId == monsterId)
+				return true;
+		}
+
+		return false;
+	}
 }

@@ -6204,26 +6204,179 @@ public class GameClient {
     }
 
 
-    private void setItemShortcut(String packet) {
-        // Official client seems to store Position -> Template+Stats rather than Position->guid
-        // Maybe it's time for ItemHash (String) representing a TemplateID+Stats pair as a Comparable
-        char action = packet.charAt(0);
-        packet = packet.substring(1);
-        String[] parts = packet.split(";");
-        int position = Integer.parseInt(parts[0]);
-        switch(action) {
-            case 'A':
-                int itemGUID = Integer.parseInt(parts[1]);
-                if(player.addItemShortcutSend(position, itemGUID)) return;
-            case 'M':
-                int otherPos = Integer.parseInt(parts[1]);
-                if(player.moveItemShortcutSend(position, otherPos)) return;
-            case 'R':
-                if(player.removeItemShortcutSend(position)) return;
-        }
-        send("BN"); // Error
-        return;
-    }
+	private void setItemShortcut(String packet) {
+		char action = packet.charAt(0);
+		packet = packet.substring(1);
+
+		String[] parts = packet.split(";");
+
+		int position;
+
+		try {
+			position = Integer.parseInt(parts[0]);
+		} catch (Exception e) {
+			send("BN");
+			return;
+		}
+
+		// =========================================================
+		// AJOUT D'UNE CARTE
+		// =========================================================
+		if (action == 'A') {
+
+			int itemGUID;
+
+			try {
+				itemGUID = Integer.parseInt(parts[1]);
+			} catch (Exception e) {
+				send("BN");
+				return;
+			}
+
+			GameObject item = player.getItems().get(itemGUID);
+
+			if (item == null) {
+				send("BN");
+				return;
+			}
+
+			// Les 3 premiers slots sont réservés aux cartes.
+			if (position >= 0 && position <= 2) {
+
+				ObjectTemplate template = item.getTemplate();
+
+				if (template == null || template.getType() != 123) {
+					SocketManager.GAME_SEND_MESSAGE(
+							player,
+							"Vous devez placer une carte de monstre dans cet emplacement.",
+							"FF0000"
+					);
+					return;
+				}
+
+				MonsterCardData cardData =
+						DatabaseManager.get(MonsterCardData.class);
+
+				if (cardData == null) {
+					send("BN");
+					return;
+				}
+
+				int monsterId =
+						cardData.getMonsterIdByCardItemId(template.getId());
+
+				if (monsterId <= 0) {
+					SocketManager.GAME_SEND_MESSAGE(
+							player,
+							"Cette carte ne peut pas être équipée.",
+							"FF0000"
+					);
+					return;
+				}
+
+				// Interdit deux fois le même monstre.
+				if (player.hasMonsterCardEquippedAtOtherPosition(
+						monsterId,
+						position
+				)) {
+					SocketManager.GAME_SEND_MESSAGE(
+							player,
+							"Ce monstre est déjà équipé.",
+							"FF0000"
+					);
+					return;
+				}
+			}
+
+			if (player.addItemShortcutSend(position, itemGUID))
+				return;
+
+			send("BN");
+			return;
+		}
+
+		// =========================================================
+		// DEPLACEMENT D'UNE CARTE
+		// =========================================================
+		if (action == 'M') {
+
+			int otherPos;
+
+			try {
+				otherPos = Integer.parseInt(parts[1]);
+			} catch (Exception e) {
+				send("BN");
+				return;
+			}
+
+			// Si destination dans les 3 slots cartes,
+			// on vérifie ce qu'on déplace.
+			if (otherPos >= 0 && otherPos <= 2) {
+
+				Integer itemId = player.getItemShortcutTemplateId(position);
+
+				if (itemId == null) {
+					send("BN");
+					return;
+				}
+
+				ObjectTemplate template =
+						World.world.getObjTemplate(itemId);
+
+				if (template == null || template.getType() != 123) {
+					SocketManager.GAME_SEND_MESSAGE(
+							player,
+							"Seules les cartes peuvent être placées dans les 3 premiers slots.",
+							"FF0000"
+					);
+					return;
+				}
+
+				MonsterCardData cardData =
+						DatabaseManager.get(MonsterCardData.class);
+
+				int monsterId =
+						cardData.getMonsterIdByCardItemId(itemId);
+
+				if (monsterId <= 0) {
+					send("BN");
+					return;
+				}
+
+				if (player.hasMonsterCardEquippedAtOtherPosition(
+						monsterId,
+						otherPos
+				)) {
+					SocketManager.GAME_SEND_MESSAGE(
+							player,
+							"Ce monstre est déjà équipé.",
+							"FF0000"
+					);
+					return;
+				}
+			}
+
+			if (player.moveItemShortcutSend(position, otherPos))
+				return;
+
+			send("BN");
+			return;
+		}
+
+		// =========================================================
+		// RETRAIT
+		// =========================================================
+		if (action == 'R') {
+
+			if (player.removeItemShortcutSend(position))
+				return;
+
+			send("BN");
+			return;
+		}
+
+		send("BN");
+	}
 
     private void useObject(String packet) {
         int guid = -1;
