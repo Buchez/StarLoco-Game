@@ -6109,7 +6109,7 @@ public class Player implements Scripted<SPlayer>, Actor {
 	public boolean isMonsterCardShortcutPosition(int position) {
 		return position >= 1 && position <= 3;
 	}
-
+ 
 	public boolean isMonsterCardEquipped(int position) {
 		Integer itemId = getItemShortcutTemplateId(position);
 

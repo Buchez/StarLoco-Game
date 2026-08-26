@@ -79,6 +79,7 @@ import org.starloco.locos.object.entity.Fragment;
 import org.starloco.locos.object.entity.SoulStone;
 import org.starloco.locos.util.TimerWaiter;
 import org.starloco.locos.util.generator.NameGenerator;
+import org.starloco.locos.database.data.game.MonsterCardData;
 
 public class GameClient {
 
@@ -6383,9 +6384,7 @@ public class GameClient {
 
 		send("BN");
 	}
-	public boolean hasCardItem(int cardItemId) {
-		return cards.containsValue(cardItemId);
-	}
+	 
     private void useObject(String packet) {
         int guid = -1;
         int targetGuid = -1;
