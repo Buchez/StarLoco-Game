@@ -1,36 +1,37 @@
 # StarLoco - Game
 The most advanced public 1.39 dofus emulator written in Java 21.
+ 
+## Système de cartes de monstres
 
-## Summary
-- Requirements
-- Usage
-- Contribute
-- Community
+Le serveur permet désormais aux monstres de posséder une carte pouvant être obtenue en combat.
 
-## Requirements
+### Fonctionnement
 
-To be able to compile this project, you'll need to be sure your computer has :
-- Javac from Amazon Corretto JDK 21
+* Chaque monstre peut avoir une carte associée.
+* La carte peut tomber après un combat avec une **chance de base de 10 %**.
+* Les cartes obtenues peuvent être équipées dans barre raccourci **3 slots** : 1, 2 et 3.
+* Au début d'un combat, les cartes équipées permettent d'**invoquer automatiquement les monstres correspondants**.
+* Le récapitulatif de fin de combat affiche les **cartes potentiellement obtenables** parmi les monstres combattus.
 
-We also recommend using IntelliJ IDEA with the emmyLUA plugin. If you decide to use Eclipse, you'll need to set it up to use Javac yourself.
+### Puissance des invocations
 
-For running the project:
-- Java - Amazon Corretto 21
-- MariaDB
+La puissance dépend du nombre d'exemplaires de la carte possédés :
 
-## Usage
+```text
+1 carte  = 10 %
+2 cartes = 20 %
+3 cartes = 30 %
+...
+10 cartes = 100 %
+```
 
-This repository is intended for people who want to compile their own version.
-If you just want to run the project, use the [Docker](https://github.com/StarLoco/StarLoco/tree/main/docker) image
+Le bonus est plafonné à **10 cartes**.
 
-Configuration file path can be specified with environment variable `STARLOCO_CONFIG_PATH`
+La vitalité de base de l'invocation suit également cette progression :
 
-## Contribute
-
-Feel free to open an issue or create a pull request.
-
-<a href="https://discord.com/invite/k3Yk9DuhgY">![Discord Banner 2](https://discordapp.com/api/guilds/856945561421086730/widget.png?style=banner2)</a>
-
-## Thanks us by buying us a coffee
-
-<a href="https://www.buymeacoffee.com/starloco" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+```text
+1 carte  = 5
+2 cartes = 10
+...
+10 cartes = 50
+``` 

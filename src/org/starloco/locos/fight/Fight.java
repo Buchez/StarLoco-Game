@@ -6091,10 +6091,7 @@ public class Fight {
 
         int cardItemId =
                 cardData.getCardItemId(monsterId);
-		int cardCount = player.getNbItemTemplate(cardItemId);
-		cardCount = Math.min(cardCount, 10);
-
-		double statMultiplier = cardCount / 10.0;
+		 
 
         if (cardItemId <= 0)
             continue;

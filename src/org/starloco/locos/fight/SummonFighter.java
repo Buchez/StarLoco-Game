@@ -3,7 +3,10 @@ package org.starloco.locos.fight;
 import org.starloco.locos.client.other.Stats;
 import org.starloco.locos.entity.monster.MonsterGrade;
 import org.starloco.locos.kernel.Constant;
-
+import org.starloco.locos.client.Player;
+ 
+import org.starloco.locos.database.DatabaseManager;
+import org.starloco.locos.database.data.game.MonsterCardData;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -49,18 +52,32 @@ public class SummonFighter extends MobFighter {
         Stats playerStats = playerFighter.getTotalStats();
 
         // Coefficient demandé : 10 % des statistiques du joueur.
-        final double SUMMON_STAT_RATIO = 0.10D;
+        // final double SUMMON_STAT_RATIO = 0.10D;
 
         // Vitalité minimale de l'invocation.
         // L'invocation possède toujours 50 PV de base auxquels on ajoute
         // 10 % de la Vitalité du joueur.
         final int BASE_SUMMON_VITALITY = 5;
-		int cardCount = player.getNbItemTemplate(cardItemId);
+		
+		// PlayerFighter playerFighter = (PlayerFighter) summoner;
+		Player player = playerFighter.getPlayer();
+
+		MonsterCardData cardData =
+			DatabaseManager.get(MonsterCardData.class);
+
+		int monsterId = mobGrade.getTemplate().getId();
+
+		int cardItemId =
+			cardData.getCardItemId(monsterId);
+
+		int cardCount =
+			player.getNbItemTemplate(cardItemId);
+
 		cardCount = Math.min(cardCount, 10);
 
-		double statMultiplier = cardCount / 10.0;
-
-		int summonVitality = BASE_SUMMON_VITALITY * cardCount;
+		double statMultiplier =
+			cardCount / 10.0D;
+			 
 
         // Ces caractéristiques proviennent à 10 % du joueur.
         // Les PA, PM et résistances ne sont volontairement PAS modifiés :
@@ -84,7 +101,7 @@ public class SummonFighter extends MobFighter {
             // L'invocation reçoit 10 % de la valeur du joueur.
             stats.put(
                 stat,
-                (int) Math.floor(playerValue * SUMMON_STAT_RATIO)
+                (int) Math.floor(playerValue * statMultiplier)
             );
         }
 
@@ -93,9 +110,9 @@ public class SummonFighter extends MobFighter {
         int playerVitality =
                 playerStats.getEffect(Constant.STATS_ADD_VITA);
 
-        int summonVitality =
-                BASE_SUMMON_VITALITY
-                + (int) Math.floor(playerVitality * SUMMON_STAT_RATIO);
+		int summonVitality =
+				(BASE_SUMMON_VITALITY * cardCount)
+				+ (int) Math.floor(playerVitality * statMultiplier);
 
         stats.put(Constant.STATS_ADD_VITA, summonVitality);
 
