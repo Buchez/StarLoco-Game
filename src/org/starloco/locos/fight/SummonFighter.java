@@ -55,6 +55,12 @@ public class SummonFighter extends MobFighter {
         // L'invocation possède toujours 50 PV de base auxquels on ajoute
         // 10 % de la Vitalité du joueur.
         final int BASE_SUMMON_VITALITY = 5;
+		int cardCount = player.getNbItemTemplate(cardItemId);
+		cardCount = Math.min(cardCount, 10);
+
+		double statMultiplier = cardCount / 10.0;
+
+		int summonVitality = BASE_SUMMON_VITALITY * cardCount;
 
         // Ces caractéristiques proviennent à 10 % du joueur.
         // Les PA, PM et résistances ne sont volontairement PAS modifiés :
