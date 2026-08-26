@@ -4509,93 +4509,8 @@ public class Fight {
 
         return Packet.toString();
     }
-	/**
+	 
  
- * Teste le drop de la carte correspondant à un monstre vaincu.
- *
- * Pour le moment le taux de base est volontairement fixé à 100 %
- * afin de tester le fonctionnement complet du système.
- *
- * La prospection utilisée est celle du Fighter, comme pour les drops
- * classiques du serveur.
- */
-	private void tryDropMonsterCard(Fighter winner, Fighter monster) {
-    if (winner == null || winner.getPlayer() == null || monster == null || monster.getMob() == null)
-        return;
-
-    Player player = winner.getPlayer();
-
-    // Identifiant du monstre vaincu.
-    int monsterId = monster.getMob().getTemplate().getId();
-
-    // Recherche de la carte associée.
-    MonsterCardData cardData = DatabaseManager.get(MonsterCardData.class);
-    int cardItemId = cardData.getCardItemId(monsterId);
-
-    // Aucun système de carte configuré pour ce monstre.
-    if (cardItemId <= 0)
-        return;
-
-    // Chance de drop.
-    double prospecting = winner.getPros() / 100.0D;
-    final double baseChance = 100.0D;
-
-    double finalChance = baseChance * prospecting;
-
-    if (finalChance > 100.0D)
-        finalChance = 100.0D;
-
-    double roll = Math.random() * 100.0D;
-
-    if (roll >= finalChance)
-        return;
-
-    // Vérifie que le template de carte existe.
-    ObjectTemplate cardTemplate = World.world.getObjTemplate(cardItemId);
-
-    if (cardTemplate == null)
-        return;
-
-    // Création de l'objet uniquement en mémoire.
-    // On évite createNewItem() car cette méthode insère immédiatement
-    // l'objet dans world_objects.
-    GameObject card = new GameObject(
-            -1,
-            cardTemplate.getId(),
-            1,
-            Constant.ITEM_POS_NO_EQUIPED,
-            new Stats(false, null),
-            new ArrayList<>(),
-            new HashMap<>(),
-            new HashMap<>(),
-            0
-    );
-
-    // Ajout dans l'inventaire.
-    // false = l'objet a été fusionné avec un objet identique déjà présent.
-    boolean added = player.addItem(card, true, false);
-
-    // Si l'objet est nouveau, il faut l'ajouter au World pour qu'il soit
-    // enregistré correctement.
-    if (added) {
-        World.world.addGameObject(card);
-    }
-
-    // Mémorise le drop pour la fenêtre de fin de combat.
-    monsterCardDrops
-            .computeIfAbsent(player.getId(), k -> new HashMap<>())
-            .merge(cardItemId, 1, Integer::sum);
-
-    // Rafraîchit l'inventaire du joueur.
-    SocketManager.GAME_SEND_Ow_PACKET(player);
-
-    // Message facultatif au joueur.
-    SocketManager.GAME_SEND_MESSAGE(
-            player,
-            "Vous avez obtenu : <b>" + cardTemplate.getName() + "</b>.",
-            "009900"
-    );
-}
     public String getGE(int win) {
         // Unused: long t1 = System.currentTimeMillis();
         final StringBuilder packet = new StringBuilder();
@@ -5125,7 +5040,7 @@ public class Fight {
 							if (loser.getMob() == null)
 								continue;
 
-							tryDropMonsterCard(i, loser);
+							 
 						}
 					}
                 if (player != null && getType() != Constant.FIGHT_TYPE_CHALLENGE)
@@ -5399,31 +5314,7 @@ public class Fight {
                             drops.append(entry.getKey()).append("~").append(entry.getValue());
                             dropsToAttribute.put(objectTemplate, entry.getValue());
                         }
-						// Ajoute les cartes de monstres dans les drops affichés en fin de combat.
-						// Ajoute les cartes de monstres aux drops affichés en fin de combat.
-						if (player != null) {
-							Map<Integer, Integer> cardDrops = monsterCardDrops.remove(player.getId());
-
-							if (cardDrops != null) {
-								for (Entry<Integer, Integer> entry : cardDrops.entrySet()) {
-									ObjectTemplate cardTemplate = World.world.getObjTemplate(entry.getKey());
-
-									if (cardTemplate == null)
-										continue;
-
-									if (drops.length() > 0)
-										drops.append(",");
-
-									drops.append(entry.getKey())
-										 .append("~")
-										 .append(entry.getValue());
-
-									// Permet également au système générique de récompense
-									// de connaître cette carte.
-									dropsToAttribute.put(cardTemplate, entry.getValue());
-								}
-							}
-						}
+						 
 
                         TimerWaiter.addNext(() -> {
                             for (Entry<ObjectTemplate, Integer> entry : dropsToAttribute.entrySet()) {
