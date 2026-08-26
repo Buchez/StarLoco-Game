@@ -6300,28 +6300,28 @@ public class GameClient {
 		// =========================================================
 		if (action == 'M') {
 
-			int otherPos;
+			int oldPos;
+			int newPos;
 
 			try {
-				otherPos = Integer.parseInt(parts[1]);
+				oldPos = Integer.parseInt(parts[0]);
+				newPos = Integer.parseInt(parts[1]);
 			} catch (Exception e) {
 				send("BN");
 				return;
 			}
 
-			// Si destination dans les 3 slots cartes,
-			// on vérifie ce qu'on déplace.
-			if (otherPos >= 0 && otherPos <= 2) {
+			Integer itemId = player.getItemShortcutTemplateId(oldPos);
 
-				Integer itemId = player.getItemShortcutTemplateId(position);
+			if (itemId == null) {
+				send("BN");
+				return;
+			}
 
-				if (itemId == null) {
-					send("BN");
-					return;
-				}
+			// Les positions 0, 1 et 2 sont les slots cartes.
+			if (newPos >= 0 && newPos <= 2) {
 
-				ObjectTemplate template =
-						World.world.getObjTemplate(itemId);
+				ObjectTemplate template = World.world.getObjTemplate(itemId);
 
 				if (template == null || template.getType() != 123) {
 					SocketManager.GAME_SEND_MESSAGE(
@@ -6335,18 +6335,24 @@ public class GameClient {
 				MonsterCardData cardData =
 						DatabaseManager.get(MonsterCardData.class);
 
-				int monsterId =
-						cardData.getMonsterIdByCardItemId(itemId);
-
-				if (monsterId <= 0) {
+				if (cardData == null) {
 					send("BN");
 					return;
 				}
 
-				if (player.hasMonsterCardEquippedAtOtherPosition(
-						monsterId,
-						otherPos
-				)) {
+				int monsterId =
+						cardData.getMonsterIdByCardItemId(itemId);
+
+				if (monsterId <= 0) {
+					SocketManager.GAME_SEND_MESSAGE(
+							player,
+							"Cette carte n'est pas associée à un monstre.",
+							"FF0000"
+					);
+					return;
+				}
+
+				if (player.hasMonsterCardEquippedAtOtherPosition(monsterId, newPos)) {
 					SocketManager.GAME_SEND_MESSAGE(
 							player,
 							"Ce monstre est déjà équipé.",
@@ -6356,7 +6362,7 @@ public class GameClient {
 				}
 			}
 
-			if (player.moveItemShortcutSend(position, otherPos))
+			if (player.moveItemShortcutSend(oldPos, newPos))
 				return;
 
 			send("BN");
@@ -6377,7 +6383,9 @@ public class GameClient {
 
 		send("BN");
 	}
-
+	public boolean hasCardItem(int cardItemId) {
+		return cards.containsValue(cardItemId);
+	}
     private void useObject(String packet) {
         int guid = -1;
         int targetGuid = -1;
