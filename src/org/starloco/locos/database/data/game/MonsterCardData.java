@@ -144,4 +144,7 @@ public class MonsterCardData extends FunctionDAO<Object> {
     public Class<?> getReferencedClass() {
         return MonsterCardData.class;
     }
+	public boolean hasCardItem(int cardItemId) {
+    return cards.containsValue(cardItemId);
+	}
 }

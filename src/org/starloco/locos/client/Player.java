@@ -6107,7 +6107,7 @@ public class Player implements Scripted<SPlayer>, Actor {
 	}
 
 	public boolean isMonsterCardShortcutPosition(int position) {
-		return position >= 0 && position <= 2;
+		return position >= 1 && position <= 3;
 	}
 
 	public boolean isMonsterCardEquipped(int position) {
