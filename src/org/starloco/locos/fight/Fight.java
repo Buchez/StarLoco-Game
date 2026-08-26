@@ -5581,8 +5581,7 @@ public class Fight {
 			// des récompenses, afin de vérifier exactement les valeurs
 			// utilisées par le système de drop.
 			sendFinalProspectionTeam0();
-			sendPossibleMonsterCards(player);
-
+			sendPossibleMonsterCards();
 			Collections.shuffle(winners);
 			Map<Integer, Integer> invoks = new HashMap<>();
 
@@ -6064,8 +6063,8 @@ public class Fight {
         return this.losers;
     }
 	
-	private void sendPossibleMonsterCards(Player player) {
-    if (player == null || this.getType() != Constant.FIGHT_TYPE_PVM)
+	private void sendPossibleMonsterCards() {
+    if (this.getType() != Constant.FIGHT_TYPE_PVM)
         return;
 
     MonsterCardData cardData =
@@ -6074,7 +6073,8 @@ public class Fight {
     if (cardData == null)
         return;
 
-    Map<Integer, String> cards = new LinkedHashMap<>();
+    Map<Integer, String> cards =
+            new LinkedHashMap<>();
 
     for (Fighter fighter : losers) {
 
@@ -6086,7 +6086,8 @@ public class Fight {
         if (mob == null || mob.getTemplate() == null)
             continue;
 
-        int monsterId = mob.getTemplate().getId();
+        int monsterId =
+                mob.getTemplate().getId();
 
         int cardItemId =
                 cardData.getCardItemId(monsterId);
@@ -6125,9 +6126,15 @@ public class Fight {
         first = false;
     }
 
-    SocketManager.GAME_SEND_MESSAGE(
-            player,
-            message.toString()
-    );
+    for (Fighter winner : winners) {
+
+        if (winner == null || winner.getPlayer() == null)
+            continue;
+
+        SocketManager.GAME_SEND_MESSAGE(
+                winner.getPlayer(),
+                message.toString()
+        );
+    }
 }
 }
