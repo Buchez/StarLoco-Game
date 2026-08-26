@@ -1181,7 +1181,7 @@ public class Fight {
 		if (cardData == null)
 			continue;
 
-		for (int position = 0; position <= 2; position++) {
+		for (int position = 1; position <= 3; position++) {
 
 			Integer cardItemId =
 				fighter.getPlayer().getItemShortcutTemplateId(position);
