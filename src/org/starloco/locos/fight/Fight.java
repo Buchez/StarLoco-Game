@@ -5581,6 +5581,7 @@ public class Fight {
 			// des récompenses, afin de vérifier exactement les valeurs
 			// utilisées par le système de drop.
 			sendFinalProspectionTeam0();
+			sendPossibleMonsterCards();
 
 			Collections.shuffle(winners);
 			Map<Integer, Integer> invoks = new HashMap<>();
@@ -6062,4 +6063,66 @@ public class Fight {
     public List<Fighter> getLosers() {
         return this.losers;
     }
+	
+	private void sendPossibleMonsterCards(Player player) {
+    if (player == null || getType() != Constant.FIGHT_TYPE_PVM)
+        return;
+
+    MonsterCardData cardData =
+            DatabaseManager.get(MonsterCardData.class);
+
+    if (cardData == null)
+        return;
+
+    Set<Integer> monstersSeen = new HashSet<>();
+    StringBuilder message = new StringBuilder("Cartes possibles : ");
+
+    boolean hasCard = false;
+
+    for (Fighter fighter : loosers) {
+
+        if (fighter == null || fighter.isInvocation())
+            continue;
+
+        MonsterGrade mob = fighter.getMob();
+
+        if (mob == null || mob.getTemplate() == null)
+            continue;
+
+        int monsterId = mob.getTemplate().getId();
+
+        // Évite de répéter la même carte si plusieurs
+        // exemplaires du même monstre étaient présents.
+        if (!monstersSeen.add(monsterId))
+            continue;
+
+        int cardItemId =
+                cardData.getCardItemId(monsterId);
+
+        if (cardItemId <= 0)
+            continue;
+
+        ObjectTemplate cardTemplate =
+                World.world.getObjTemplate(cardItemId);
+
+        if (cardTemplate == null)
+            continue;
+
+        if (hasCard)
+            message.append(" | ");
+
+        message.append(mob.getTemplate().getName())
+               .append(" → ")
+               .append(cardTemplate.getName());
+
+        hasCard = true;
+    }
+
+    if (hasCard) {
+        SocketManager.GAME_SEND_MESSAGE(
+                player,
+                message.toString()
+        );
+    }
+	}
 }
