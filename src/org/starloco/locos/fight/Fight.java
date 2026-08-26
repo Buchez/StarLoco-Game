@@ -5581,7 +5581,7 @@ public class Fight {
 			// des récompenses, afin de vérifier exactement les valeurs
 			// utilisées par le système de drop.
 			sendFinalProspectionTeam0();
-			sendPossibleMonsterCards();
+			sendPossibleMonsterCards(player);
 
 			Collections.shuffle(winners);
 			Map<Integer, Integer> invoks = new HashMap<>();
@@ -6065,7 +6065,7 @@ public class Fight {
     }
 	
 	private void sendPossibleMonsterCards(Player player) {
-    if (player == null || getType() != Constant.FIGHT_TYPE_PVM)
+    if (player == null || this.getType() != Constant.FIGHT_TYPE_PVM)
         return;
 
     MonsterCardData cardData =
@@ -6074,12 +6074,9 @@ public class Fight {
     if (cardData == null)
         return;
 
-    Set<Integer> monstersSeen = new HashSet<>();
-    StringBuilder message = new StringBuilder("Cartes possibles : ");
+    Map<Integer, String> cards = new LinkedHashMap<>();
 
-    boolean hasCard = false;
-
-    for (Fighter fighter : loosers) {
+    for (Fighter fighter : losers) {
 
         if (fighter == null || fighter.isInvocation())
             continue;
@@ -6090,11 +6087,6 @@ public class Fight {
             continue;
 
         int monsterId = mob.getTemplate().getId();
-
-        // Évite de répéter la même carte si plusieurs
-        // exemplaires du même monstre étaient présents.
-        if (!monstersSeen.add(monsterId))
-            continue;
 
         int cardItemId =
                 cardData.getCardItemId(monsterId);
@@ -6108,21 +6100,34 @@ public class Fight {
         if (cardTemplate == null)
             continue;
 
-        if (hasCard)
-            message.append(" | ");
-
-        message.append(mob.getTemplate().getName())
-               .append(" → ")
-               .append(cardTemplate.getName());
-
-        hasCard = true;
-    }
-
-    if (hasCard) {
-        SocketManager.GAME_SEND_MESSAGE(
-                player,
-                message.toString()
+        cards.put(
+                monsterId,
+                "Monstre #" + monsterId
+                        + " → "
+                        + cardTemplate.getName()
         );
     }
-	}
+
+    if (cards.isEmpty())
+        return;
+
+    StringBuilder message =
+            new StringBuilder("Cartes de drop possibles : ");
+
+    boolean first = true;
+
+    for (String card : cards.values()) {
+
+        if (!first)
+            message.append(" | ");
+
+        message.append(card);
+        first = false;
+    }
+
+    SocketManager.GAME_SEND_MESSAGE(
+            player,
+            message.toString()
+    );
+}
 }
