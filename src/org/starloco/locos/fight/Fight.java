@@ -3302,9 +3302,12 @@ public class Fight {
                         // Il ne peut plus jouer, et est mort on revient au joueur
                         // pr�cedent pour que le startTurn passe au suivant
 
+						// Si l'invocation morte était en train de jouer,
+						// on termine d'abord correctement son tour.
+						// La suppression de l'invocation de orderPlaying se fera juste après,
+						// avec l'ajustement de curPlayer déjà prévu plus bas.
 						if (current.getId() == target.getId()) {
 							this.setCurAction("");
-							this.setCurPlayer(getCurPlayer() - 1);
 							this.endTurn(false, current);
 						}
 
