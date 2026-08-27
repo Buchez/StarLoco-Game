@@ -6107,7 +6107,7 @@ public class Player implements Scripted<SPlayer>, Actor {
 	}
 
 	public boolean isMonsterCardShortcutPosition(int position) {
-		return position >= 1 && position <= 3;
+		return position >= 1 && position <= 7;
 	}
  
 	public boolean isMonsterCardEquipped(int position) {
@@ -6129,7 +6129,7 @@ public class Player implements Scripted<SPlayer>, Actor {
 		if (cardData == null)
 			return false;
 
-		for (int position = 0; position <= 2; position++) {
+		for (int position = 1; position <= 7; position++) {
 			if (position == exceptPosition)
 				continue;
 

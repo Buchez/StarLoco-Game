@@ -6242,7 +6242,7 @@ public class GameClient {
 			}
 
 			// Les 3 premiers slots sont réservés aux cartes.
-			if (position >= 1 && position <= 3) {
+			if (position >= 1 && position <= 7) {
 
 				ObjectTemplate template = item.getTemplate();
 
@@ -6324,7 +6324,7 @@ public class GameClient {
 			}
 
 			// Les positions 0, 1 et 2 sont les slots cartes.
-			if (newPos >= 1 && newPos <= 3) {
+			if (newPos >= 1 && newPos <= 7) {
 
 				ObjectTemplate template = World.world.getObjTemplate(itemId);
 
