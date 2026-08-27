@@ -3520,14 +3520,26 @@ public class Fight {
 		// modifier les données globales du monstre 972.
 		grade.setLevel(owner.getLvl());
 		int cellId = getMap().getRandomNearFreeCellId(owner.getCell().getId());
+		GameCase cell = cellId >= 0 ? getMap().getCase(cellId) : null;
 
-		if (cellId < 0)
-			return;
+		// Si la cellule trouvée n'est pas réellement utilisable,
+		// on cherche une autre cellule libre parmi les cases de la map.
+		if (cell == null || !cell.isWalkableFight() || !cell.getFighters().isEmpty()) {
+			List<GameCase> freeCells = new ArrayList<>();
 
-		GameCase cell = getMap().getCase(cellId);
+			for (GameCase candidate : getMap().getCases()) {
+				if (candidate != null
+						&& candidate.isWalkableFight()
+						&& candidate.getFighters().isEmpty()) {
+					freeCells.add(candidate);
+				}
+			}
 
-		if (cell == null || !cell.isWalkableFight() || !cell.getFighters().isEmpty())
-			return;
+			if (freeCells.isEmpty())
+				return;
+
+			cell = freeCells.get(Formulas.random.nextInt(freeCells.size()));
+		}
 
 		Fighter summon = Fighter.NewSummon(
 				getNextLowerFighterGuid(),
