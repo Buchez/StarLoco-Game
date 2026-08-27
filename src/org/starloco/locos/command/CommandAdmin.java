@@ -61,15 +61,7 @@ public class CommandAdmin extends AdminUser {
         String command = infos[0];
 
         try {
-            Group groupe = this.getPlayer().getGroup();
-            if (groupe == null) {
-                this.getClient().kick();
-                return;
-            }
-            if (!groupe.haveCommand(command)) {
-                this.sendMessage("Commande invalide !");
-                return;
-            }
+			Group groupe = this.getPlayer().getGroup();	
 
             this.command(command, infos, msg);
         } catch (Exception e) {

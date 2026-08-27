@@ -3302,20 +3302,11 @@ public class Fight {
                         // Il ne peut plus jouer, et est mort on revient au joueur
                         // pr�cedent pour que le startTurn passe au suivant
 
-                        if (current.getId() == target.getId()) {
-                            if (!target.canPlay()) {
-                                this.setCurAction("");
-                                this.setCurPlayer(getCurPlayer() - 1);
-                                this.endTurn(false, current);
-                            }
-                            // Il peut jouer, et est mort alors on passe son tour
-                            // pour que l'autre joue, puis on le supprime de l'index
-                            // sans probl�mes
-                            else if (target.canPlay()) {
-                                this.setCurAction("");
-                                this.endTurn(false, current);
-                            }
-                        }
+						if (current.getId() == target.getId()) {
+							this.setCurAction("");
+							this.setCurPlayer(getCurPlayer() - 1);
+							this.endTurn(false, current);
+						}
 
                         if (this.getOrderPlaying() != null && !this.getOrderPlaying().isEmpty()) {
                             int index = this.getOrderPlaying().indexOf(target);
