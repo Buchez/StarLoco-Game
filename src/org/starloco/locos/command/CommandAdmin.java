@@ -86,9 +86,9 @@ public class CommandAdmin extends AdminUser {
 
 				help.append("Commandes disponibles :\n");
 
-				for (String cmd : CommandManager.getAdminCommands()) {
-					help.append(cmd).append("\n");
-				}
+				// for (String cmd : CommandManager.getAdminCommands()) {
+					// help.append(cmd).append("\n");
+				// }
 
 				this.sendMessage(help.toString());
 				return;
