@@ -82,18 +82,42 @@ public class CommandAdmin extends AdminUser {
             SocketManager.GAME_SEND_CHALLENGE_FIGHT(this.getPlayer().getFight(), 1, challenge.parseToPacket());
             return;
         } else if (command.equalsIgnoreCase("HELP")) {
-				StringBuilder help = new StringBuilder();
+			String cmd = infos.length == 2 ? infos[1] : "";
 
-				help.append("Commandes disponibles :\n");
+			if (cmd.equalsIgnoreCase("")) {
+				this.sendMessage("\nToutes les commandes disponibles :\n");
 
-				// for (String cmd : CommandManager.getAdminCommands()) {
-					// help.append(cmd).append("\n");
-				// }
+				for (Command commande : Command.commands.values()) {
+					String args = (commande.getArgs() != null && !commande.getArgs().equalsIgnoreCase(""))
+							? " + " + commande.getArgs()
+							: "";
 
-				this.sendMessage(help.toString());
-				return;
+					String desc = (commande.getDesc() != null && !commande.getDesc().equalsIgnoreCase(""))
+							? commande.getDesc()
+							: "";
+
+					this.sendMessage("<u>" + commande.getName() + args + "</u> - " + desc);
+				}
+			} else {
+				this.sendMessage("\nCommandes recherchées :\n");
+
+				for (Command commande : Command.commands.values()) {
+					if (commande.getName().contains(cmd.toUpperCase())) {
+						String args = (commande.getArgs() != null && !commande.getArgs().equalsIgnoreCase(""))
+								? " + " + commande.getArgs()
+								: "";
+
+						String desc = (commande.getDesc() != null && !commande.getDesc().equalsIgnoreCase(""))
+								? commande.getDesc()
+								: "";
+
+						this.sendMessage("<u>" + commande.getName() + args + "</u> - " + desc);
+					}
+				}
 			}
-        else if (command.equalsIgnoreCase("STARTBOUFBOWL")) {
+
+			return;
+		} else if (command.equalsIgnoreCase("STARTBOUFBOWL")) {
             if(this.getPlayer().getCurMap().getId() != 9862)
                 return;
 

@@ -12,6 +12,8 @@ import org.starloco.locos.kernel.Constant;
 import org.starloco.locos.kernel.Logging;
 import org.starloco.locos.object.GameObject;
 import org.starloco.locos.util.TimerWaiter;
+import org.starloco.locos.command.CommandAdmin;
+import org.starloco.locos.command.administration.Command;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -26,9 +28,19 @@ public class CommandPlayer {
 
     public static boolean analyse(Player player, String msg) {
         msg = msg.replace("|", "");
-        if (msg.charAt(0) == '.') {
-            if(command(msg, "help")) {
-                return commandHelp(player, msg);
+			if (msg.charAt(0) == '.') {
+
+				String adminCommand = msg.substring(1).split(" ")[0];
+
+			for (Command admin : Command.commands.values()) {
+				if (admin.getName().equalsIgnoreCase(adminCommand)) {
+					new CommandAdmin(player).apply("A " + msg.substring(1));
+					return true;
+				}
+			}
+
+			if(command(msg, "help")) {
+				return commandHelp(player, msg);
             } else if (command(msg, "all") && msg.length() > 5) {
                 return commandAll(player, msg);
             } else if (command(msg, "noall")) {
