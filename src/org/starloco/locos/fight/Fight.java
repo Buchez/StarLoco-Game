@@ -3306,20 +3306,37 @@ public class Fight {
 						// on termine d'abord correctement son tour.
 						// La suppression de l'invocation de orderPlaying se fera juste après,
 						// avec l'ajustement de curPlayer déjà prévu plus bas.
-						if (current.getId() == target.getId()) {
-							this.setCurAction("");
-							this.endTurn(false, current);
-						}
+						// if (current.getId() == target.getId()) {
+							// this.setCurAction("");
+							// this.endTurn(false, current);
+						// }
 
                         if (this.getOrderPlaying() != null && !this.getOrderPlaying().isEmpty()) {
                             int index = this.getOrderPlaying().indexOf(target);
                             // Si le joueur courant a un index plus �lev�, on le
                             // diminue pour �viter le outOfBound
-                            if (index != -1) {
-                                if (getCurPlayer() > index && getCurPlayer() > 0)
-                                    this.setCurPlayer(getCurPlayer() - 1);
-                                this.getOrderPlaying().remove(index);
-                            }
+                           if (index != -1) {
+								boolean wasCurrentFighter =
+										current != null && current.getId() == target.getId();
+
+								if (getCurPlayer() > index && getCurPlayer() > 0)
+									this.setCurPlayer(getCurPlayer() - 1);
+
+								this.getOrderPlaying().remove(index);
+
+								if (wasCurrentFighter) {
+									this.setCurAction("");
+
+									// On se place juste avant le combattant suivant,
+									// puis endTurn avancera normalement.
+									this.setCurPlayer(getCurPlayer() - 1);
+
+									if (this.getCurPlayer() < -1)
+										this.setCurPlayer(-1);
+
+									this.startTurn();
+								}
+							}
 
                             if (this.getCurPlayer() < 0)
                                 return;

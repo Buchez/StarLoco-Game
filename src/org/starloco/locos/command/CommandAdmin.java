@@ -82,27 +82,17 @@ public class CommandAdmin extends AdminUser {
             SocketManager.GAME_SEND_CHALLENGE_FIGHT(this.getPlayer().getFight(), 1, challenge.parseToPacket());
             return;
         } else if (command.equalsIgnoreCase("HELP")) {
-            String cmd = infos.length == 2 ? infos[1] : "";
+				StringBuilder help = new StringBuilder();
 
-            if (cmd.equalsIgnoreCase("")) {
-                this.sendMessage("\nVous avez actuellement le groupe GM " + this.getPlayer().getGroup().getName() + ".\nCommandes disponibles :\n");
-                for (Command commande : this.getPlayer().getGroup().getCommands()) {
-                    String args = (commande.getArgs() != null && !commande.getArgs().equalsIgnoreCase("")) ? (" + " + commande.getArgs()) : ("");
-                    String desc = (commande.getDesc() != null && !commande.getDesc().equalsIgnoreCase("")) ? (commande.getDesc()) : ("");
-                    this.sendMessage("<u>" + commande.getName() + args + "</u> - " + desc);
-                }
-            } else {
-                this.sendMessage("\nVous avez actuellement le groupe GM " + this.getPlayer().getGroup().getName() + ".\nCommandes recherches :\n");
-                for (Command commande : this.getPlayer().getGroup().getCommands()) {
-                    if (commande.getName().contains(cmd.toUpperCase())) {
-                        String args = (commande.getArgs() != null && !commande.getArgs().equalsIgnoreCase("")) ? (" + " + commande.getArgs()) : ("");
-                        String desc = (commande.getDesc() != null && !commande.getDesc().equalsIgnoreCase("")) ? (commande.getDesc()) : ("");
-                        this.sendMessage("<u>" + commande.getName() + args + "</u> - " + desc);
-                    }
-                }
-            }
-            return;
-        }
+				help.append("Commandes disponibles :\n");
+
+				for (String cmd : CommandManager.getAdminCommands()) {
+					help.append(cmd).append("\n");
+				}
+
+				this.sendMessage(help.toString());
+				return;
+			}
         else if (command.equalsIgnoreCase("STARTBOUFBOWL")) {
             if(this.getPlayer().getCurMap().getId() != 9862)
                 return;
