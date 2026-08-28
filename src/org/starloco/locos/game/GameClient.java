@@ -747,10 +747,9 @@ public class GameClient {
 
     private void authorisedCommand(String packet) {
         if (this.adminUser == null) this.adminUser = new CommandAdmin(this.player);
-        if (this.player.getGroup() == null || this.getPlayer() == null) {
-            this.getAccount().getGameClient().kick();
-            return;
-        }
+		if (this.getPlayer() == null) {
+			return;
+		}
 
         if (Logging.USE_LOG)
             Logging.getInstance().write("CommandAdmin", this.getAccount().getCurrentIp() + " : " + this.getAccount().getName() + " > " + this.getPlayer().getName() + " > " + packet.substring(2));
