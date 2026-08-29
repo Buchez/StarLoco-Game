@@ -2682,8 +2682,7 @@ public class Fight {
                 this.curFighterUsedPa += spell.getPACost();
             }
 
-            boolean isEc = spell.getTauxEC() != 0 && Formulas.getRandomValue(1, spell.getTauxEC()) == spell.getTauxEC();
-            if (fighter.hasBuff(782)) isEc = false;
+            boolean isEc = false;
 
             if (isEc) {
                 SocketManager.GAME_SEND_GA_PACKET_TO_FIGHT(this, 7, 302, fighter.getId() + "", spell.getSpellID() + ""); // envoi de  l'EC
@@ -2758,7 +2757,7 @@ public class Fight {
         if (!this.canCastSpellMob(fighter, spell, Cell, -1))
             return;
 
-        boolean isEc = spell.getTauxEC() != 0 && Formulas.getRandomValue(1, spell.getTauxEC()) == spell.getTauxEC();
+        boolean isEc = false;
 
         if (isEc) {
             SocketManager.GAME_SEND_GA_PACKET_TO_FIGHT(this, 7, 302, fighter.getId() + "", spell.getSpellID() + ""); // envoi de  l'EC
