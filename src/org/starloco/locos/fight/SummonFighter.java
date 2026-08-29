@@ -107,6 +107,17 @@ public class SummonFighter extends MobFighter {
 		
 		if (cardCount >= 10) {
 
+			    // Récupère la PO du personnage.
+			int bonusPO = playerStats.getEffect(Constant.STATS_ADD_PO);
+
+			if (bonusPO > 0) {
+				// Ajoute la PO du personnage à la PO native de l'invocation.
+				stats.put(
+					Constant.STATS_ADD_PO,
+					stats.getOrDefault(Constant.STATS_ADD_PO, 0) + bonusPO
+				);
+			}
+			 
 			// Récupère uniquement le bonus PA du personnage.
 			int bonusPA = playerStats.getEffect(Constant.STATS_ADD_PA2);
 
