@@ -66,14 +66,14 @@ public class PlayerMonsterCardData extends FunctionDAO<Object> {
      * Équipe une carte dans un slot.
      *
      * Vérifie :
-     * - slot 1 à 3
+     * - slot 1 à 7
      * - carte existante
      * - correspondance carte -> monstre
      * - pas de doublon de monstre
      */
     public boolean equip(int playerId, int slot, int cardItemId) {
 
-        if (slot < 1 || slot > 3)
+        if (slot < 1 || slot > 7)
             return false;
 
         MonsterCardData monsterCardData =
@@ -135,7 +135,7 @@ public class PlayerMonsterCardData extends FunctionDAO<Object> {
      */
     public boolean unequip(int playerId, int slot) {
 
-        if (slot < 1 || slot > 3)
+        if (slot < 1 || slot > 7)
             return false;
 
         try {
