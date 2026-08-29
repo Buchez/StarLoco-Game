@@ -104,6 +104,31 @@ public class SummonFighter extends MobFighter {
                 (int) Math.floor(playerValue * statMultiplier)
             );
         }
+		
+		if (cardCount >= 10) {
+
+			// Récupère uniquement le bonus PA du personnage.
+			int bonusPA = playerStats.getEffect(Constant.STATS_ADD_PA2);
+
+			// Récupère uniquement le bonus PM du personnage.
+			int bonusPM = playerStats.getEffect(Constant.STATS_ADD_PM2);
+
+			// Ajoute uniquement le bonus PA aux PA natifs de l'invocation.
+			if (bonusPA > 0) {
+				stats.put(
+					Constant.STATS_ADD_PA,
+					stats.getOrDefault(Constant.STATS_ADD_PA, 0) + bonusPA
+				);
+			}
+
+			// Ajoute uniquement le bonus PM aux PM natifs de l'invocation.
+			if (bonusPM > 0) {
+				stats.put(
+					Constant.STATS_ADD_PM,
+					stats.getOrDefault(Constant.STATS_ADD_PM, 0) + bonusPM
+				);
+			}
+		}
 
         // Vitalité spéciale :
         // 50 PV de base + 10 % de la Vitalité du joueur.
