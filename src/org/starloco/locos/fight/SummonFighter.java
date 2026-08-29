@@ -108,10 +108,10 @@ public class SummonFighter extends MobFighter {
 		if (cardCount >= 10) {
 
 			// Récupère uniquement le bonus PA du personnage.
-			int bonusPA = playerStats.getEffect(Constant.STATS_ADD_PA2);
+			int bonusPA = playerStats.getEffect(Constant.STATS_ADD_PA);
 
 			// Récupère uniquement le bonus PM du personnage.
-			int bonusPM = playerStats.getEffect(Constant.STATS_ADD_PM2);
+			int bonusPM = playerStats.getEffect(Constant.STATS_ADD_PM);
 
 			// Ajoute uniquement le bonus PA aux PA natifs de l'invocation.
 			if (bonusPA > 0) {
@@ -129,6 +129,8 @@ public class SummonFighter extends MobFighter {
 				);
 			}
 		}
+		
+		
 
         // Vitalité spéciale :
         // 50 PV de base + 10 % de la Vitalité du joueur.
@@ -143,4 +145,72 @@ public class SummonFighter extends MobFighter {
 
         return new Stats(stats);
     }
+	
+			@Override
+		public int getPa() {
+			int pa = super.getPa();
+
+			if (!(summoner instanceof PlayerFighter))
+				return pa;
+
+			PlayerFighter playerFighter = (PlayerFighter) summoner;
+			Player player = playerFighter.getPlayer();
+
+			MonsterCardData cardData =
+					DatabaseManager.get(MonsterCardData.class);
+
+			int monsterId = mobGrade.getTemplate().getId();
+			int cardItemId = cardData.getCardItemId(monsterId);
+
+			int cardCount = player.getNbItemTemplate(cardItemId);
+
+			// Bonus PA uniquement à partir de 10 cartes.
+			if (cardCount >= 10) {
+				Stats playerStats = playerFighter.getTotalStats();
+
+				// PA du joueur moins ses 7 PA de base.
+				int bonusPA =
+						playerStats.getEffect(Constant.STATS_ADD_PA) - 7;
+
+				if (bonusPA > 0)
+					pa += bonusPA;
+			}
+
+			return pa;
+		}
+
+		@Override
+		public int getPm() {
+			int pm = super.getPm();
+
+			if (!(summoner instanceof PlayerFighter))
+				return pm;
+
+			PlayerFighter playerFighter = (PlayerFighter) summoner;
+			Player player = playerFighter.getPlayer();
+
+			MonsterCardData cardData =
+					DatabaseManager.get(MonsterCardData.class);
+
+			int monsterId = mobGrade.getTemplate().getId();
+			int cardItemId = cardData.getCardItemId(monsterId);
+
+			int cardCount = player.getNbItemTemplate(cardItemId);
+
+			// Bonus PM uniquement à partir de 10 cartes.
+			if (cardCount >= 10) {
+				Stats playerStats = playerFighter.getTotalStats();
+
+				// PM du joueur moins ses 3 PM de base.
+				int bonusPM =
+						playerStats.getEffect(Constant.STATS_ADD_PM) - 3;
+
+				if (bonusPM > 0)
+					pm += bonusPM;
+			}
+
+			return pm;
+		}
+	
+	
 }

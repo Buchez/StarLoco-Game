@@ -61,16 +61,24 @@ public class MobFighter extends Fighter {
 
     @Override
     protected Stream<String> getGMPacketParts() {
-        return Stream.of(
-            "-2",
-            mobGrade.getTemplate().getGfxId() + "^" + mobGrade.getSize(),
-            String.valueOf(mobGrade.getGrade()),
-            mobGrade.getTemplate().getColors().replace(",", ";"),
-            "0,0,0,0",
-            String.valueOf(getPdvMax()),
-            String.valueOf(mobGrade.getPa()),
-            String.valueOf(mobGrade.getPm())
-        );
+	int pa = mobGrade.getPa();
+	int pm = mobGrade.getPm();
+
+	if (this instanceof SummonFighter) {
+		pa = getPa();
+		pm = getPm();
+	}
+
+	return Stream.of(
+		"-2",
+		mobGrade.getTemplate().getGfxId() + "^" + mobGrade.getSize(),
+		String.valueOf(mobGrade.getGrade()),
+		mobGrade.getTemplate().getColors().replace(",", ";"),
+		"0,0,0,0",
+		String.valueOf(getPdvMax()),
+		String.valueOf(pa),
+		String.valueOf(pm)
+	);
     }
 
 
