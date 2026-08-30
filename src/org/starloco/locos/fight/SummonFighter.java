@@ -179,9 +179,8 @@ public class SummonFighter extends MobFighter {
 			if (cardCount >= 10) {
 				Stats playerStats = playerFighter.getTotalStats();
 
-				// PA du joueur moins ses 7 PA de base.
-				int bonusPA =
-						playerStats.getEffect(Constant.STATS_ADD_PA) - 7;
+				// PA du joueur moins ses 6 PA de base.
+				int bonusPA = playerStats.get(Constant.STATS_ADD_PA) - 6;
 
 				if (bonusPA > 0)
 					pa += bonusPA;
