@@ -675,15 +675,16 @@ public class ObjectAction {
 						 *     présentes après le deuxième ';'
 						 * 2 = données du groupe
 						 */
-						boolean inArena = soulStoneArgs.length > 0
-								&& soulStoneArgs[0].equalsIgnoreCase("true");
+						// boolean inArena = soulStoneArgs.length > 0
+								// && soulStoneArgs[0].equalsIgnoreCase("true");
+						
 
 						/*
 						 * On conserve la restriction actuelle des gemmes marquées
 						 * "true" : elles doivent être utilisées dans une arène.
 						 */
-						if (inArena && !SoulStone.isInArenaMap(player.getCurMap().getId()))
-							return;
+						// if (inArena && !SoulStone.isInArenaMap(player.getCurMap().getId()))
+							// return;
 
 						String groupData = "";
 
