@@ -1043,67 +1043,44 @@ public class ObjectAction {
 						sureIsOk = true;
 						break;
 						
-						case 41: // Parchemin vierge de mercenariat : donne un parchemin de sort aléatoire.
+						case 41: // Parchemin vierge : donne un parchemin de sort aléatoire.
 							if (player0.getFight() != null)
 								return;
 
-							/*
-							 * Les récompenses correspondent aux 216 parchemins de sorts
-							 * présents dans item_template, de l'ID 101678 à l'ID 101893.
-							 */
+							// IDs des parchemins de sorts disponibles.
 							final int FIRST_REWARD_ID = 101678;
 							final int LAST_REWARD_ID = 101893;
 
-							// Choisit aléatoirement un parchemin dans la plage.
+							// Tirage aléatoire d'un ID.
 							int rewardId = FIRST_REWARD_ID
 									+ Formulas.random.nextInt(
 											LAST_REWARD_ID - FIRST_REWARD_ID + 1
 									);
 
-							// Récupère le template de l'objet gagné.
+							// Récupère le template du parchemin.
 							ObjectTemplate rewardTemplate = World.world.getObjTemplate(rewardId);
 
-							// Sécurité : l'ID doit exister dans la base / le monde.
-							if (rewardTemplate == null) {
-								isOk = false;
-								send = false;
+							if (rewardTemplate == null)
 								return;
-							}
-
-							// Crée 1 exemplaire du parchemin.
-							GameObject reward = rewardTemplate.createNewItem(1, false);
-
-							// Sécurité supplémentaire en cas d'échec de création.
-							if (reward == null) {
-								isOk = false;
-								send = false;
-								return;
-							}
 
 							/*
-							 * Ajoute le parchemin dans l'inventaire.
-							 *
-							 * IMPORTANT :
-							 * addItem() retourne false lorsque l'objet est simplement
-							 * empilé avec un exemplaire déjà présent dans l'inventaire.
-							 * Ce n'est donc PAS une erreur.
+							 * Même mécanique que le case 26 :
+							 * création d'un objet en quantité 1 puis ajout à l'inventaire.
 							 */
-							if (player.addItem(reward, true, false))
-								World.world.addGameObject(reward);
+							obj = rewardTemplate.createNewItem(1, false);
 
-							// Affiche au client le parchemin obtenu.
+							if (player.addItem(obj, true, false))
+								World.world.addGameObject(obj);
+
+							// Informe le client de l'objet obtenu.
 							SocketManager.GAME_SEND_Im_PACKET(
 									player,
-									"021;1~" + rewardId
+									"021;1~" + rewardTemplate.getId()
 							);
 
-							/*
-							 * Signale que l'utilisation du Parchemin vierge a réussi.
-							 * Le code situé après le switch supprimera alors le 10002.
-							 */
+							// L'action est réussie : le 8711 sera consommé.
 							sureIsOk = true;
-							break;
-						
+							break;						
 						
 						
 
