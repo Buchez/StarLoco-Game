@@ -1042,6 +1042,71 @@ public class ObjectAction {
 						// L'action a réussi.
 						sureIsOk = true;
 						break;
+						
+						case 41: // Ouverture de l'objet 10002 : récompense aléatoire.
+
+						// L'objet ne peut pas être utilisé pendant un combat.
+						if (player0.getFight() != null)
+							return;
+
+						/*
+						 * Les objets gagnables vont de 101678 à 101893.
+						 *
+						 * Les IDs étant consécutifs, inutile de stocker les 216 IDs
+						 * dans un tableau.
+						 */
+						final int FIRST_REWARD_ID = 101678;
+						final int LAST_REWARD_ID = 101893;
+
+						// Choisit un ID aléatoire dans la plage, bornes incluses.
+						int rewardId = FIRST_REWARD_ID
+								+ Formulas.random.nextInt(
+										LAST_REWARD_ID - FIRST_REWARD_ID + 1
+								);
+
+						// Vérifie que l'objet existe réellement.
+						ObjectTemplate rewardTemplate =
+								World.world.getObjTemplate(rewardId);
+
+						if (rewardTemplate == null) {
+							isOk = false;
+							send = false;
+							break;
+						}
+
+						/*
+						 * Crée 1 exemplaire de l'objet obtenu.
+						 */
+						GameObject reward =
+								rewardTemplate.createNewItem(1, false);
+
+						/*
+						 * Ajoute la récompense à l'inventaire.
+						 */
+						if (!player0.addItem(reward, true, false)) {
+							isOk = false;
+							send = false;
+							break;
+						}
+
+						// Rend l'objet disponible dans le World.
+						World.world.addGameObject(reward);
+
+						/*
+						 * Informe le client de l'objet obtenu.
+						 */
+						SocketManager.GAME_SEND_Im_PACKET(
+								player0,
+								"021;1~" + rewardId
+						);
+
+						// L'utilisation de l'objet est considérée comme réussie.
+						sureIsOk = true;
+
+						break;
+						
+						
+						
 
                 }
                 turn++;
