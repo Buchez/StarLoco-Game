@@ -59,6 +59,11 @@ public class CommandPlayer {
                 return commandInterval(player, msg);
             } else if(command(msg, "start") || command(msg, "astrub")) {
                 return commandAstrub(player, msg);
+			} else if(command(msg, "shop")) {
+				// .shop = téléportation vers la map 10114, cellule 100.
+				// On utilise la méthode de téléportation native du joueur.
+				player.teleport(10114, 100);
+				return true;
             } else if(command(msg, "walkfast")) {
                 player.walkFast = !player.walkFast;
                 return true;

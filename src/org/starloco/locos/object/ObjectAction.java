@@ -898,6 +898,86 @@ public class ObjectAction {
                         send = false;
                         isOk = false;
                         break;
+					case 40: // Gemme Spirituelle Emballée
+						if (player0.getFight() != null)
+							return;
+
+						// Liste des gemmes pouvant être obtenues.
+						// Chaque ID correspond à un item de votre item_template.
+						int[] gemmes = {
+							10227, // Mob l'Eponge
+							10228, // Bouftou Royal
+							10229, // Tournesol Affamé
+							10230, // Gelée Royale Bleue
+							10231, // Shin Larve
+							10233, // Scarabosse Doré
+							10234, // Bworkette
+							10235, // Dragon Cochon
+							10236, // Gelée Royale Menthe
+							10237, // Tofu Royal
+							10238, // Blop Coco Royal
+							10239, // Blop Griotte Royal
+							10240, // Blop Indigo Royal
+							10241, // Blop Reinette Royal
+							10242, // Rat Noir
+							10244, // Minotoror
+							10245, // Dark Vlad
+							10246, // Tanukouï San
+							10247, // Craqueleur Légendaire
+							10248, // Gardienne des Egouts
+							10249, // Gelée Royale Fraise
+							10250, // Maître Corbac
+							10251, // Blop Multicolore Royal
+							10252, // Corailleur Magistral
+							10253, // Gourlo le Terrible
+							10254, // Meulou
+							10255, // Wa Wabbit
+							10256, // Moon
+							10257, // Koulosse
+							10258, // Skeunk
+							10259, // Abraknyde Ancestral
+							10260, // Maître Pandore
+							10261, // Tynril
+							10262, // Gelée Royale Citron
+							10263, // Bworker
+							10264, // Sphincter Cell
+							10265, // Minotot
+							10266, // Silf le Rasboul Majeur
+							10267, // Péki Péki
+							10268, // Chêne Mou
+							10269, // Ougah
+							10270, // Kimbo
+							10278, // Crocabulia
+							10606  // Rat Blanc
+						};
+
+						// Sélection aléatoire d'une gemme.
+						int gemmeId = gemmes[Formulas.random.nextInt(gemmes.length)];
+
+						// Création de l'objet.
+						ObjectTemplate gemmeTemplate = World.world.getObjTemplate(gemmeId);
+
+						if (gemmeTemplate == null) {
+							isOk = false;
+							send = false;
+							return;
+						}
+
+						GameObject nouvelleGemme = gemmeTemplate.createNewItem(1, false);
+
+						// Ajout au personnage.
+						if (player.addItem(nouvelleGemme, true, false))
+							World.world.addGameObject(nouvelleGemme);
+
+						// Message client : obtention de l'objet.
+						SocketManager.GAME_SEND_Im_PACKET(
+							player,
+							"021;1~" + gemmeId
+						);
+
+						// L'action a réussi.
+						sureIsOk = true;
+						break;
 
                 }
                 turn++;
