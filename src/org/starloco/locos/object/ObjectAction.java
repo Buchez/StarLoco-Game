@@ -657,21 +657,84 @@ public class ObjectAction {
                             player.teleport(mapId, cellId);
                         break;
 
-                    case 25://Spawn groupe.
-                        if (player0.getFight() != null || player0.getCurMap().haveMobFix()) return;
-                        boolean inArena = arg.split(";")[0].equals("true");
-                        String groupData = "";
-                        if (inArena && !SoulStone.isInArenaMap(player.getCurMap().getId()))
-                            return;
-                        if (arg.split(";")[1].charAt(0) == '1') {
-                            groupData = arg.split("@")[1];
-                        } else {
-                            SoulStone soulStone = (SoulStone) World.world.getGameObject(objet);
-                            groupData = soulStone.parseGroupData();
-                        }
-                        String condition = "MiS = " + player.getId();
-                        player.getCurMap().spawnNewGroup(true, player.getCurCell().getId(), groupData, condition);
-                        break;
+					case 25: // Spawn groupe depuis une gemme spirituelle.
+
+						// Une gemme ne peut pas être utilisée pendant un combat.
+						if (player0.getFight() != null || player0.getCurMap().haveMobFix())
+							return;
+
+						String[] soulStoneArgs = arg.split(";", 3);
+
+						/*
+						 * Format actuel de vos gemmes :
+						 *
+						 * true;1;924,24,25;923,10,11;...
+						 *
+						 * 0 = restriction arène
+						 * 1 = indique que les données du groupe sont directement
+						 *     présentes après le deuxième ';'
+						 * 2 = données du groupe
+						 */
+						boolean inArena = soulStoneArgs.length > 0
+								&& soulStoneArgs[0].equalsIgnoreCase("true");
+
+						/*
+						 * On conserve la restriction actuelle des gemmes marquées
+						 * "true" : elles doivent être utilisées dans une arène.
+						 */
+						if (inArena && !SoulStone.isInArenaMap(player.getCurMap().getId()))
+							return;
+
+						String groupData = "";
+
+						if (soulStoneArgs.length >= 3
+								&& soulStoneArgs[1].equals("1")) {
+
+							/*
+							 * On récupère directement tout ce qui se trouve après
+							 * "true;1;".
+							 *
+							 * Exemple :
+							 * true;1;924,24,25;923,10,11;922,10,11
+							 *
+							 * devient :
+							 * 924,24,25;923,10,11;922,10,11
+							 */
+							groupData = soulStoneArgs[2];
+
+						} else {
+
+							/*
+							 * Cas où la gemme contient elle-même les monstres
+							 * dans son objet SoulStone.
+							 */
+							SoulStone soulStone =
+									(SoulStone) World.world.getGameObject(objet);
+
+							if (soulStone == null)
+								return;
+
+							groupData = soulStone.parseGroupData();
+						}
+
+						// Aucun groupe valide.
+						if (groupData == null || groupData.isEmpty())
+							return;
+
+						// Le groupe est lié au joueur ayant utilisé la gemme.
+						String condition = "MiS = " + player.getId();
+
+						// Création du groupe sur la map actuelle.
+						player.getCurMap().spawnNewGroup(
+							true,
+							player.getCurCell().getId(),
+							groupData,
+							condition
+						);
+
+						break;
+
+					 
 
                     case 26://Ajout d'objet.
                         if (player0.getFight() != null) return;
