@@ -60,7 +60,9 @@ public class CommandPlayer {
             } else if(command(msg, "start") || command(msg, "astrub")) {
                 return commandAstrub(player, msg);
 			} else if(command(msg, "revive")) {
-                return player.revive();
+				// Lance la résurrection native du joueur.
+				player.revive();
+				return true;
 			} else if(command(msg, "shop")) {
 				// .shop = téléportation vers la map 10114, cellule 100.
 				// On utilise la méthode de téléportation native du joueur.
